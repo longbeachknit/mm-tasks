@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>モルマニ タスク管理</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e4e7ec;
+  --accent:#2f6fed;--accent-soft:#e8efff;--danger:#c4320a;--danger-soft:#fdeee9;
+  --warn:#b54708;--warn-soft:#fef4e6;--ok:#067647;--ok-soft:#e5f5eb;--wip:#7a5af8;--wip-soft:#f0edff;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12151c;--card:#1b2029;--ink:#e6e9ef;--sub:#98a2b3;--line:#2c3340;
+  --accent:#6b9bff;--accent-soft:#1f2b45;--danger:#ff7a5c;--danger-soft:#3a1f1a;
+  --warn:#f5a54a;--warn-soft:#3a2a15;--ok:#4cc38a;--ok-soft:#173326;--wip:#a48afb;--wip-soft:#2a2342;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.bar{max-width:980px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.bar h1{font-size:16px;margin:0;flex:1;white-space:nowrap}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+nav{max-width:980px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto}
+nav button{border:0;background:none;padding:8px 12px;border-bottom:3px solid transparent;color:var(--sub);white-space:nowrap;cursor:pointer}
+nav button.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+main{max-width:980px;margin:0 auto;padding:16px 16px 80px}
+h2{font-size:15px;margin:22px 0 8px;display:flex;align-items:center;gap:8px}
+h2 .n{font-size:12px;font-weight:400;color:var(--sub)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.muted{color:var(--sub);font-size:13px}
+.empty{color:var(--sub);font-size:13px;padding:10px 2px}
+.btn{border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.dan{color:var(--danger)}
+.btn.sm{padding:3px 9px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 11px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.tag.gray{background:var(--bg);color:var(--sub);border:1px solid var(--line)}
+/* tasks */
+.list{display:flex;flex-direction:column;gap:6px}
+.task{display:flex;align-items:flex-start;gap:10px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:9px 10px}
+.task.late{border-left-color:var(--danger)}
+.task.st-wip{border-left-color:var(--wip)}
+.task.st-done{opacity:.55}
+.task.st-done .t{text-decoration:line-through}
+.st{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:var(--card);cursor:pointer;font-size:14px;line-height:1;display:grid;place-items:center}
+.st-wip .st{border-color:var(--wip);color:var(--wip);background:var(--wip-soft)}
+.st-done .st{border-color:var(--ok);color:#fff;background:var(--ok)}
+.task .body{flex:1;min-width:0;cursor:pointer}
+.task .t{font-weight:600;word-break:break-word}
+.meta{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin-top:2px}
+.meta .late{color:var(--danger);font-weight:600}
+.meta .noone{color:var(--warn)}
+.man{flex:none;font-size:12px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;align-self:center}
+.man.none{color:var(--sub);border-style:dashed}
+.dayhead{font-size:13px;font-weight:600;margin:14px 0 4px;color:var(--sub)}
+.dayhead.today{color:var(--accent)}
+.dayhead.late{color:var(--danger)}
+.prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 2px}
+.prog i{display:block;height:100%;background:var(--ok)}
+.ev{cursor:pointer}
+.ev .nm{font-weight:600}
+.alert{background:var(--danger-soft);color:var(--danger);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:8px}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .wd{font-size:12px;text-align:center;color:var(--sub);padding:2px 0}
+.cell{min-height:74px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px;cursor:pointer;overflow:hidden;font-size:11px}
+.cell.out{opacity:.4}
+.cell.sel{outline:2px solid var(--accent)}
+.cell .d{font-size:12px;font-weight:600}
+.cell.td .d{color:#fff;background:var(--accent);border-radius:99px;padding:0 6px;display:inline-block}
+.cell .evc{display:block;color:#fff;border-radius:4px;padding:0 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .cnt{display:inline-block;margin-top:2px;padding:0 5px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.cell .cnt.late{background:var(--danger-soft);color:var(--danger)}
+.cell .rt{display:block;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tbl td,.tbl th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}
+.tbl th{font-size:12px;color:var(--sub);font-weight:600;background:var(--bg)}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover td{background:var(--accent-soft)}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;z-index:20;overflow:auto}
+.modal{background:var(--card);border-radius:12px;width:100%;max-width:520px;padding:16px}
+.modal h3{margin:0 0 12px;font-size:16px}
+.f{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.f label{font-size:12px;color:var(--sub);font-weight:600}
+.f input,.f select,.f textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);width:100%}
+.f textarea{min-height:70px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checks{display:flex;flex-direction:column;gap:4px}
+.checks label{font-size:14px;color:var(--ink);font-weight:400;display:flex;gap:8px;align-items:center}
+.foot{display:flex;gap:8px;margin-top:14px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;display:none;z-index:30;max-width:90vw}
+/* login */
+.login{max-width:360px;margin:12vh auto;padding:0 16px}
+@media (max-width:560px){.cell{min-height:56px}.cell .evc,.cell .rt{display:none}.cell .evd{display:block;width:6px;height:6px;border-radius:50%;margin-top:3px}.f2{grid-template-columns:1fr}}
+@media (min-width:561px){.cell .evd{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+/* ============================================================
+   設定：ここに Supabase の情報を入れると「本番モード」になる。
+   空のままなら「お試しモード」（このブラウザの中だけに保存）。
+   ============================================================ */
+const CONFIG = {
+  SUPABASE_URL: 'https://evpqtybycqyfyebbxfhu.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
+};
+
+const TABLES = ['members','templates','events','tasks','routines','routine_checks'];
+const S = {members:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],staff:[]};
+const ui = {tab:'home', who:lsGet('mm_who')||'', eventId:null, evMode:'date', calMonth:null, calDay:null, user:null, isAdmin:false, noAccess:false};
+
+/* ---------- 小さな道具 ---------- */
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+const WD=['日','月','火','水','木','金','土'];
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d)};
+const diffDays=(a,b)=>Math.round((parse(a)-parse(b))/864e5);
+const today=()=>ymd(new Date());
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const md=s=>{const d=parse(s);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`};
+const rel=s=>{const n=diffDays(s,today());return n===0?'今日':n===1?'明日':n>0?`あと${n}日`:`${-n}日過ぎ`};
+const daysLabel=n=>n<0?`${-n}日前`:n===0?'当日':`${n}日後`;
+const byDue=(a,b)=>(a.due<b.due?-1:a.due>b.due?1:(a.sort||0)-(b.sort||0));
+const evById=id=>S.events.find(e=>e.id===id);
+const memName=id=>(S.members.find(m=>m.id===id)||{}).name||'';
+const EV_COLORS=['#2f6fed','#e8590c','#0ca678','#ae3ec9','#d6336c','#1098ad','#f59f00','#5c7cfa'];
+function evColor(id){const sorted=[...S.events].sort((a,b)=>a.date<b.date?-1:1);const i=sorted.findIndex(e=>e.id===id);return EV_COLORS[(i<0?0:i)%EV_COLORS.length]}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3200)}
+function loadScript(src){return new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)})}
+
+/* ---------- テンプレの初期データ（スプレッドシート「【テンプレ】大会別タスクチェック」より） ----------
+   [大項目, タスク, 大会日から何日（マイナス＝前／プラス＝後）, マニュアル名, 条件タグ, メモ] */
+const SEED_TEMPLATES = [
+  ['告知','募集サイト作成',-100,'【マニュアル】Peatix_大会ページ作成'],
+  ['告知','募集サイト確認、公開',-90],
+  ['告知','X予約投稿（早割終了間近）',-50,'【マニュアル】X予約投稿','SNS告知'],
+  ['告知','instagram告知（早割終了間近）',-40,'','SNS告知'],
+  ['告知','OCでの大会告知（早割終了間近）',-40,'','OC告知'],
+  ['告知','X予約投稿（大会開催）',-30,'【マニュアル】X予約投稿','SNS告知'],
+  ['告知','instagram告知（大会開催）',-14,'','SNS告知'],
+  ['告知','OCでの大会告知（大会開催）',-14,'','OC告知'],
+  ['賞品','賞品選定',-30],
+  ['賞品','ボールペン発注',-30],
+  ['賞品','賞品発注（全大会共通）',-18],
+  ['賞品','賞品発注（大会オリジナル）',-18],
+  ['賞品','HRDに連絡',-18],
+  ['賞品','松葉屋本店に連絡',-18],
+  ['賞品','賞状発注',-14,'【マニュアル】賞状発注'],
+  ['賞品','キーホルダー発注',-14,'【マニュアル】キーホルダー発注'],
+  ['賞品','缶バッチ購入',-14,'【マニュアル】缶バッチ発注'],
+  ['賞品','賞状ケース等購入',-7],
+  ['賞品','発注系ダブルチェック',-7],
+  ['賞品','じゃんけん大会用パネル作成',-7,'','じゃんけん大会'],
+  ['賞品','じゃんけん大会用パネル印刷',-3,'','じゃんけん大会'],
+  ['賞品','賞品到着最終確認',-3],
+  ['対戦表・OSS','レギュレーション決定',-14],
+  ['対戦表・OSS','テンプレ作成',-10],
+  ['対戦表・OSS','テンプレダブルチェック',-7],
+  ['対戦表・OSS','景品類を対戦表に記入',-7],
+  ['対戦表・OSS','7日前業務',-7,'','','※中身をマニュアルに書く予定'],
+  ['対戦表・OSS','5日前業務',-5,'','','※中身をマニュアルに書く予定'],
+  ['対戦表・OSS','4日前業務',-4,'','','※中身をマニュアルに書く予定'],
+  ['対戦表・OSS','3日前業務',-3,'','','※中身をマニュアルに書く予定'],
+  ['対戦表・OSS','2日前業務',-2,'','','※中身をマニュアルに書く予定'],
+  ['対戦表・OSS','前日業務',-1,'','','※中身をマニュアルに書く予定'],
+  ['備品','レンタカー借りる',-30],
+  ['備品','ラインパウダー購入',-14],
+  ['備品','セット・カーリ購入',-14],
+  ['備品','その他備品購入',-14],
+  ['備品','充電コード本数確認',-7],
+  ['備品','スコアシート印刷',-3],
+  ['備品','会場費準備',-3],
+  ['備品','香盤表印刷',-3],
+  ['備品','QR印刷',-3],
+  ['備品','狙い通りかの紙確認',-3],
+  ['備品','キッチンカー紙印刷',-3,'','キッチンカー'],
+  ['備品','スコアシートセット',-2],
+  ['備品','バッテリー充電',-1],
+  ['キッチンカー','キッチンカー仲介業者連携',-60,'','キッチンカー'],
+  ['キッチンカー','キッチンカー最終確認',-14,'','キッチンカー'],
+  ['スタッフ','運営スタッフ募集（アサインスタッフ記載）',-60],
+  ['スタッフ','運営スタッフ募集進捗確認',-30],
+  ['スタッフ','朝準備スタッフ募集',-30],
+  ['スタッフ','SAKURAN参加可否確認',-30,'','SAKURAN'],
+  ['スタッフ','運営スタッフ確定',-14],
+  ['スタッフ','SAKURAN申し込み確認',-14,'','SAKURAN'],
+  ['スタッフ','朝準備スタッフ確定',-10],
+  ['スタッフ','SAKURAN集合時間等連絡',-7,'','SAKURAN'],
+  ['スタッフ','香盤表作成',-7],
+  ['スタッフ','持ち物等詳細連絡',-5],
+  ['スタッフ','当日の動き確認',-3,'','','担当：全員'],
+  ['スタッフ','設営動画作成・送信',-2],
+  ['OC連絡','7日前連絡（Peatix）',-7],
+  ['OC連絡','OCに概要送信',-7],
+  ['OC連絡','参加者リスト送信',-5],
+  ['OC連絡','前日ご案内送信',-3,'','','※元の表では「3日前」。前日でよいか要確認'],
+  ['OC連絡','対戦表送信',-2],
+  ['当日','SNS更新（insta/twitter）',0],
+  ['当日','倉庫備品・残数確認、備品確認',0],
+  ['当日','スキットル破損確認',0],
+  ['当日','ポイントランキング作成',0],
+  ['当日','参加者アンケート送信',0],
+  ['当日','次回大会のご案内',0],
+  ['当日','優勝者ファイナルOC招待',0],
+  ['大会終了後','OSS関連',1,'','','※中身をマニュアルに書く予定'],
+  ['大会終了後','キッチンカー連絡',1,'','キッチンカー'],
+  ['大会終了後','HRD連絡',1],
+  ['大会終了後','松葉屋本店連絡',1],
+  ['大会終了後','ポイントランキングSNS告知',3],
+  ['大会終了後','経費申請（大会後3日以内）',3],
+  ['大会終了後','反省点洗い出し',3],
+  ['大会終了後','LINEオプチャ写真共有',7],
+];
+/* [タスク, 種類 daily/weekly/monthly, 曜日(0=日..6=土) or 日にち] */
+const SEED_ROUTINES = [
+  ['参加者連絡返答（LINE＠）','daily',null],
+  ['Peatix返信','daily',null],
+  ['定例MTG','weekly',4],
+  ['月別収支作成','monthly',20],
+  ['請求書作成','monthly',25],
+];
+
+function seedBase(){
+  S.templates = SEED_TEMPLATES.map((r,i)=>({id:uid(),category:r[0],title:r[1],days:r[2],manual_name:r[3]||'',manual_url:'',tag:r[4]||'',memo:r[5]||'',sort:i}));
+  S.routines = SEED_ROUTINES.map((r,i)=>({id:uid(),title:r[0],kind:r[1],dow:r[1]==='weekly'?r[2]:null,dom:r[1]==='monthly'?r[2]:null,assignee:null,manual_url:'',memo:'',sort:i}));
+}
+function seedDemo(){
+  seedBase();
+  S.members = ['御手洗','大城'].map((n,i)=>({id:uid(),name:n,sort:i}));
+  const allTags = tagList();
+  const demo=[['会社対抗2026秋','2026-11-07',allTags],['川崎S.7-2','2026-11-14',allTags],
+    ['NRI社内モルック大会','2026-11-15',allTags.filter(t=>t!=='SNS告知'&&t!=='OC告知')],
+    ['川崎S.7-3','2026-12-12',allTags],['シングルスvol.3','2026-12-13',allTags]];
+  for(const [name,date,tags] of demo){
+    const ev={id:uid(),name,date,tags,memo:''};
+    S.events.push(ev);
+    for(const t of tasksFromTemplates(ev)){ if(t.due<today()) t.status='done'; S.tasks.push(t); }
+  }
+  lsSet('mm_demo_seeded','1');
+}
+
+/* ---------- データの保存先 ---------- */
+const LocalDB = {
+  mode:'local',
+  async init(){return true},
+  async loadAll(){
+    const raw=lsGet('mm_tasks_data');
+    if(raw){try{Object.assign(S,JSON.parse(raw))}catch(e){seedDemo()}} else {seedDemo(); this.save()}
+  },
+  save(){lsSet('mm_tasks_data',JSON.stringify(S))},
+  async upsert(){this.save()},
+  async remove(){this.save()},
+};
+const CloudDB = {
+  mode:'cloud', sb:null,
+  async init(){
+    if(!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
+    this.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    const {data} = await this.sb.auth.getSession();
+    ui.user = data.session ? data.session.user : null;
+    return !!data.session;
+  },
+  async loadAll(){
+    const {data:ok,error:e1}=await this.sb.rpc('is_staff');
+    if(e1) throw e1;
+    if(!ok){ui.noAccess=true;return}
+    const {data:st,error:e2}=await this.sb.from('staff_access').select('*').order('created_at');
+    if(e2) throw e2;
+    S.staff=st||[];
+    ui.isAdmin=S.staff.some(x=>x.email===(ui.user.email||'').toLowerCase()&&x.is_admin);
+    const res=await Promise.all(TABLES.map(t=>this.sb.from(t).select('*').range(0,9999)));
+    res.forEach((r,i)=>{if(r.error) throw r.error; S[TABLES[i]]=r.data});
+    if(ui.isAdmin&&!S.templates.length&&!S.routines.length){   // 最初の1回だけ：テンプレとルーティンを入れる
+      seedBase();
+      await this.upsert('templates',S.templates); await this.upsert('routines',S.routines);
+    }
+  },
+  async upsert(t,rows){const {error}=await this.sb.from(t).upsert(rows);if(error)throw error},
+  async remove(t,ids){const {error}=await this.sb.from(t).delete().in('id',ids);if(error)throw error},
+};
+const DB = CONFIG.SUPABASE_URL ? CloudDB : LocalDB;
+
+async function put(t,rows){
+  rows=[].concat(rows);
+  for(const r of rows){const i=S[t].findIndex(x=>x.id===r.id); if(i>=0) S[t][i]=r; else S[t].push(r);}
+  render();
+  try{await DB.upsert(t,rows)}catch(e){toast('保存に失敗しました：'+e.message+'（再読み込みしてください）')}
+}
+async function del(t,ids){
+  ids=[].concat(ids); if(!ids.length) return;
+  S[t]=S[t].filter(x=>!ids.includes(x.id));
+  render();
+  try{await DB.remove(t,ids)}catch(e){toast('削除に失敗しました：'+e.message)}
+}
+
+/* ---------- 仕組み ---------- */
+function tagList(){return [...new Set(S.templates.map(t=>t.tag).filter(Boolean))]}
+function tasksFromTemplates(ev){
+  return S.templates.filter(t=>!t.tag||(ev.tags||[]).includes(t.tag)).map(t=>({
+    id:uid(),event_id:ev.id,template_id:t.id,category:t.category,title:t.title,
+    due:addDays(ev.date,t.days),days:t.days,status:'todo',assignee:null,
+    manual_name:t.manual_name||'',manual_url:t.manual_url||'',memo:t.memo||'',sort:t.sort
+  }));
+}
+function routineOn(r,day){
+  const d=parse(day);
+  if(r.kind==='daily') return true;
+  if(r.kind==='weekly') return d.getDay()===Number(r.dow);
+  if(r.kind==='monthly') return d.getDate()===Number(r.dom);
+  return false;
+}
+function routineRule(r){return r.kind==='daily'?'毎日':r.kind==='weekly'?`毎週${WD[r.dow]}曜日`:`毎月${r.dom}日`}
+function routineDone(r,day){return S.routine_checks.some(c=>c.routine_id===r.id&&c.date===day)}
+const mine=t=>!ui.who||t.assignee===ui.who;
+const STATUS={todo:['','未着手'],wip:['◐','作業中'],done:['✓','完了']};
+
+/* ---------- 部品 ---------- */
+function taskRow(t,{showEvent=true}={}){
+  const late=t.status!=='done'&&t.due<today();
+  const ev=t.event_id?evById(t.event_id):null;
+  const man=t.manual_url?`<a class="man" href="${esc(t.manual_url)}" target="_blank" rel="noopener">マニュアル</a>`
+    :(t.manual_name?`<span class="man none" title="リンク未設定">マニュアル未設定</span>`:'');
+  return `<div class="task st-${t.status} ${late?'late':''}">
+    <button class="st" data-act="cycle" data-id="${t.id}" title="${STATUS[t.status][1]}（押すと切り替え）">${STATUS[t.status][0]}</button>
+    <div class="body" data-act="editTask" data-id="${t.id}">
+      <div class="t">${esc(t.title)}</div>
+      <div class="meta">
+        <span class="${late?'late':''}">${md(t.due)}・${rel(t.due)}</span>
+        ${showEvent?(ev?`<span style="color:${evColor(ev.id)}">● ${esc(ev.name)}</span>`:'<span>単発タスク</span>'):''}
+        ${t.assignee?`<span>担当：${esc(memName(t.assignee))}</span>`:`<span class="noone">担当未定</span>`}
+        ${t.status==='wip'?'<span style="color:var(--wip)">作業中</span>':''}
+        ${t.memo?`<span>📝 ${esc(t.memo.slice(0,30))}</span>`:''}
+      </div>
+    </div>${man}</div>`;
+}
+function routineRow(r,day){
+  const done=routineDone(r,day);
+  return `<div class="task ${done?'st-done':''}">
+    <button class="st" data-act="checkRoutine" data-id="${r.id}" data-day="${day}">${done?'✓':''}</button>
+    <div class="body" data-act="editRoutine" data-id="${r.id}"><div class="t">${esc(r.title)}</div>
+      <div class="meta"><span>${routineRule(r)}</span>${r.assignee?`<span>担当：${esc(memName(r.assignee))}</span>`:''}</div></div>
+    ${r.manual_url?`<a class="man" href="${esc(r.manual_url)}" target="_blank" rel="noopener">マニュアル</a>`:''}</div>`;
+}
+const listOr=(items,html,emptyMsg)=>items.length?`<div class="list">${items.map(html).join('')}</div>`:`<div class="empty">${emptyMsg}</div>`;
+function whoChips(){
+  return `<div class="chips"><span class="muted" style="align-self:center">表示：</span>
+    <button class="chip ${!ui.who?'on':''}" data-act="who" data-id="">全員</button>
+    ${S.members.map(m=>`<button class="chip ${ui.who===m.id?'on':''}" data-act="who" data-id="${m.id}">${esc(m.name)}</button>`).join('')}</div>`;
+}
+function evStats(ev){
+  const ts=S.tasks.filter(t=>t.event_id===ev.id);
+  const done=ts.filter(t=>t.status==='done').length;
+  const late=ts.filter(t=>t.status!=='done'&&t.due<today()).length;
+  const noone=ts.filter(t=>t.status!=='done'&&!t.assignee).length;
+  return {total:ts.length,done,late,noone};
+}
+function evCard(ev){
+  const s=evStats(ev), n=diffDays(ev.date,today());
+  return `<div class="card ev" data-act="openEvent" data-id="${ev.id}" style="border-left:4px solid ${evColor(ev.id)}">
+    <div class="row"><span class="nm">${esc(ev.name)}</span><span class="sp"></span><span class="muted">${md(ev.date)}</span></div>
+    <div class="muted">${n>0?`大会まであと${n}日`:n===0?'今日が大会日':'終了'}</div>
+    <div class="prog"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
+    <div class="meta"><span>完了 ${s.done}/${s.total}</span>${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone&&n>=0?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
+  </div>`;
+}
+
+/* ---------- 画面 ---------- */
+function byDayGroups(ts){
+  return [...new Set(ts.map(x=>x.due))].map(d=>{const items=ts.filter(x=>x.due===d);
+    return `<div class="dayhead">${md(d)}・${rel(d)}　<span style="font-weight:400">${items.length}件</span></div><div class="list">${items.map(x=>taskRow(x)).join('')}</div>`}).join('');
+}
+function viewHome(){
+  const t=today(), open=S.tasks.filter(x=>x.status!=='done'&&mine(x));
+  const late=open.filter(x=>x.due<t).sort(byDue);
+  const now=open.filter(x=>x.due===t).sort(byDue);
+  const week=open.filter(x=>x.due>t&&x.due<=addDays(t,7)).sort(byDue);
+  const rts=S.routines.filter(r=>routineOn(r,t)&&(!ui.who||!r.assignee||r.assignee===ui.who));
+  const upcoming=S.events.filter(e=>e.date>=t).sort((a,b)=>a.date<b.date?-1:1).slice(0,4);
+  return `${whoChips()}
+    <h2>期限切れ <span class="n">${late.length}件</span></h2>${listOr(late,x=>taskRow(x),'期限切れはありません 🎉')}
+    <h2>今日まで <span class="n">${md(t)}・${now.length}件</span></h2>${listOr(now,x=>taskRow(x),'今日が期限のタスクはありません')}
+    <h2>今日のルーティン</h2>${listOr(rts,r=>routineRow(r,t),'今日のルーティンはありません')}
+    <h2>これから7日間 <span class="n">${week.length}件</span></h2>${week.length?byDayGroups(week):'<div class="empty">この1週間に期限のタスクはありません</div>'}
+    <h2>近くの大会</h2>${upcoming.length?`<div class="grid">${upcoming.map(evCard).join('')}</div>`:'<div class="empty">登録された大会はありません</div>'}`;
+}
+
+function viewEvents(){
+  const t=today();
+  const up=S.events.filter(e=>e.date>=t).sort((a,b)=>a.date<b.date?-1:1);
+  const past=S.events.filter(e=>e.date<t).sort((a,b)=>a.date>b.date?-1:1);
+  return `<div class="row"><span class="muted">大会を登録すると、テンプレからタスクが日付つきで自動で作られます。</span><span class="sp"></span>
+    <button class="btn pri" data-act="newEvent">＋ 大会を登録</button></div>
+    <h2>これからの大会 <span class="n">${up.length}件</span></h2>${up.length?`<div class="grid">${up.map(evCard).join('')}</div>`:'<div class="empty">ありません</div>'}
+    <h2>終わった大会 <span class="n">${past.length}件</span></h2>${past.length?`<div class="grid">${past.map(evCard).join('')}</div>`:'<div class="empty">ありません</div>'}`;
+}
+
+function viewEvent(){
+  const ev=evById(ui.eventId); if(!ev){ui.eventId=null;return viewEvents()}
+  const s=evStats(ev), t=today();
+  const ts=S.tasks.filter(x=>x.event_id===ev.id).sort(byDue);
+  let body='';
+  if(ui.evMode==='date'){
+    const days=[...new Set(ts.map(x=>x.due))];
+    body=days.map(d=>{
+      const items=ts.filter(x=>x.due===d), n=diffDays(d,ev.date);
+      const cls=d===t?'today':(d<t&&items.some(x=>x.status!=='done')?'late':'');
+      return `<div class="dayhead ${cls}">${md(d)}　${daysLabel(n)}　<span style="font-weight:400">（${rel(d)}）</span></div>
+        <div class="list">${items.map(x=>taskRow(x,{showEvent:false})).join('')}</div>`;
+    }).join('');
+  }else{
+    const cats=[...new Set(ts.map(x=>x.category))];
+    body=cats.map(c=>{const items=ts.filter(x=>x.category===c);const d=items.filter(x=>x.status==='done').length;
+      return `<div class="dayhead">${esc(c)}　<span style="font-weight:400">${d}/${items.length}</span></div><div class="list">${items.map(x=>taskRow(x,{showEvent:false})).join('')}</div>`}).join('');
+  }
+  return `<div class="row"><button class="btn sm" data-act="back">← 大会一覧</button></div>
+    <div class="card" style="margin-top:10px;border-left:4px solid ${evColor(ev.id)}">
+      <div class="row"><h2 style="margin:0">${esc(ev.name)}</h2><span class="sp"></span>
+        <button class="btn sm" data-act="editEvent" data-id="${ev.id}">大会情報を編集</button></div>
+      <div class="muted">${md(ev.date)}・${rel(ev.date)}　${(ev.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join(' ')}</div>
+      <div class="prog"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
+      <div class="meta"><span>完了 ${s.done}/${s.total}</span>${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
+      ${ev.memo?`<div class="muted" style="margin-top:6px">📝 ${esc(ev.memo)}</div>`:''}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="chips"><button class="chip ${ui.evMode==='date'?'on':''}" data-act="evMode" data-id="date">日付順</button>
+      <button class="chip ${ui.evMode==='cat'?'on':''}" data-act="evMode" data-id="cat">項目別</button></div>
+      <span class="sp"></span><button class="btn sm" data-act="newTask" data-id="${ev.id}">＋ タスクを追加</button></div>
+    ${body||'<div class="empty">タスクがありません</div>'}`;
+}
+
+function viewCalendar(){
+  const t=today();
+  if(!ui.calMonth) ui.calMonth=t.slice(0,7);
+  if(!ui.calDay) ui.calDay=t;
+  const [y,m]=ui.calMonth.split('-').map(Number);
+  const first=new Date(y,m-1,1), start=new Date(first); start.setDate(1-first.getDay());
+  let cells='';
+  for(let i=0;i<42;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i); const ds=ymd(d);
+    if(i===35&&d.getMonth()!==m-1) break;
+    const evs=S.events.filter(e=>e.date===ds);
+    const ts=S.tasks.filter(x=>x.due===ds&&x.status!=='done'&&mine(x));
+    const late=ts.some(x=>ds<t);
+    const rts=S.routines.filter(r=>r.kind!=='daily'&&routineOn(r,ds));
+    cells+=`<div class="cell ${d.getMonth()!==m-1?'out':''} ${ds===t?'td':''} ${ds===ui.calDay?'sel':''}" data-act="calDay" data-id="${ds}">
+      <span class="d">${d.getDate()}</span>
+      ${evs.map(e=>`<span class="evc" style="background:${evColor(e.id)}">${esc(e.name)}</span><span class="evd" style="background:${evColor(e.id)}"></span>`).join('')}
+      ${ts.length?`<span class="cnt ${late?'late':''}">${ts.length}件</span>`:''}
+      ${rts.map(r=>`<span class="rt">・${esc(r.title)}</span>`).join('')}
+    </div>`;
+  }
+  const sd=ui.calDay;
+  const dEvs=S.events.filter(e=>e.date===sd);
+  const dTs=S.tasks.filter(x=>x.due===sd&&mine(x)).sort(byDue);
+  const dRts=S.routines.filter(r=>routineOn(r,sd));
+  return `${whoChips()}
+    <div class="row" style="margin:12px 0 8px"><button class="btn sm" data-act="calMove" data-id="-1">←</button>
+      <strong>${y}年${m}月</strong><button class="btn sm" data-act="calMove" data-id="1">→</button>
+      <button class="btn sm" data-act="calMove" data-id="0">今月</button></div>
+    <div class="cal">${WD.map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
+    <h2>${md(sd)} の予定</h2>
+    ${dEvs.map(e=>`<div class="card ev" data-act="openEvent" data-id="${e.id}" style="border-left:4px solid ${evColor(e.id)};margin-bottom:6px"><span class="nm">🏆 ${esc(e.name)}</span>（大会日）</div>`).join('')}
+    ${listOr(dTs,x=>taskRow(x),'この日が期限のタスクはありません')}
+    ${dRts.length?`<div class="dayhead">ルーティン</div><div class="list">${dRts.map(r=>routineRow(r,sd)).join('')}</div>`:''}`;
+}
+
+function viewRoutines(){
+  const single=S.tasks.filter(t=>!t.event_id).sort(byDue);
+  const openS=single.filter(t=>t.status!=='done'), doneS=single.filter(t=>t.status==='done');
+  return `<h2>くり返しのタスク（ルーティン）<span class="sp"></span><button class="btn sm" data-act="newRoutine">＋ 追加</button></h2>
+    <div class="muted" style="margin-bottom:6px">チェックはその日ごとに付けられます（ホームの「今日のルーティン」から）。</div>
+    ${listOr([...S.routines].sort((a,b)=>(a.sort||0)-(b.sort||0)),r=>routineRow(r,today()),'ありません')}
+    <h2>単発のタスク（大会に関係ないもの）<span class="sp"></span><button class="btn sm" data-act="newTask" data-id="">＋ 追加</button></h2>
+    ${listOr(openS,x=>taskRow(x),'ありません')}
+    ${doneS.length?`<div class="dayhead">完了したもの</div><div class="list">${doneS.map(x=>taskRow(x)).join('')}</div>`:''}`;
+}
+
+function viewTemplates(){
+  const ts=[...S.templates].sort((a,b)=>a.days-b.days||(a.sort||0)-(b.sort||0));
+  const cats=[...new Set([...S.templates].sort((a,b)=>(a.sort||0)-(b.sort||0)).map(t=>t.category))];
+  const tags=tagList();
+  return `<div class="note">ここを変えると、<b>これから登録する大会</b>に反映されます。すでに登録した大会のタスクは変わりません（大会ごとに直接直せます）。</div>
+    <div class="row" style="margin-top:12px"><span class="muted">全${S.templates.length}件・条件タグ：${tags.map(x=>`<span class="tag">${esc(x)}</span>`).join(' ')||'なし'}</span>
+      <span class="sp"></span><button class="btn pri" data-act="newTemplate">＋ テンプレに追加</button></div>
+    ${cats.map(c=>`<h2>${esc(c)}</h2><table class="tbl"><tr><th style="width:80px">いつ</th><th>タスク</th><th style="width:30%">マニュアル・条件</th></tr>
+      ${ts.filter(t=>t.category===c).map(t=>`<tr class="click" data-act="editTemplate" data-id="${t.id}">
+        <td>${daysLabel(t.days)}</td><td>${esc(t.title)}${t.memo?`<div class="muted">${esc(t.memo)}</div>`:''}</td>
+        <td>${t.manual_name?`<div class="muted">${t.manual_url?'🔗':'⚠️'} ${esc(t.manual_name)}</div>`:''}${t.tag?`<span class="tag">${esc(t.tag)}のときだけ</span>`:''}</td></tr>`).join('')}
+    </table>`).join('')}`;
+}
+
+function viewSettings(){
+  return `<h2>スタッフ</h2>
+    <div class="card"><div class="list" style="gap:4px">${S.members.map(m=>`<div class="row"><span>${esc(m.name)}</span><span class="sp"></span><button class="btn sm dan" data-act="delMember" data-id="${m.id}">削除</button></div>`).join('')||'<div class="empty">まだいません</div>'}</div>
+    <form class="row" style="margin-top:10px" data-form="addMember"><input name="name" placeholder="名前" required style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg)"><button class="btn pri">追加</button></form></div>
+    <h2>このアプリについて</h2>
+    <div class="card">
+      ${DB.mode==='local'?`<p style="margin-top:0"><b>お試しモード</b>で動いています。データはこのパソコンのこのブラウザの中にだけ保存され、ほかの人には見えません。入っている大会・状況はお試し用の仮のものです。</p>
+        <div class="row"><button class="btn" data-act="exportData">データを書き出す</button><button class="btn" data-act="importData">データを読み込む</button><button class="btn dan" data-act="resetDemo">お試しデータに戻す</button></div>`
+      :`<p style="margin-top:0">ログイン中：${esc(ui.user&&ui.user.email)}${ui.isAdmin?'（管理者）':''}</p><div class="row"><button class="btn" data-act="exportData">データを書き出す（控え）</button><button class="btn dan" data-act="logout">ログアウト</button></div>`}
+    </div>
+    ${DB.mode==='cloud'?viewStaff():''}`;
+}
+function viewStaff(){
+  const me=(ui.user.email||'').toLowerCase();
+  return `<h2>ログインできる人</h2>
+    <div class="card">
+      <div class="muted" style="margin-bottom:8px">ここにあるメールアドレスの人だけが、アプリに入れます。追加された人は、ログイン画面の「はじめての方」から自分でパスワードを決めます。</div>
+      <table class="tbl"><tr><th>名前</th><th>メールアドレス</th><th>権限</th>${ui.isAdmin?'<th></th>':''}</tr>
+      ${S.staff.map(x=>`<tr><td>${esc(x.name)}</td><td style="word-break:break-all">${esc(x.email)}</td><td>${x.is_admin?'管理者':'スタッフ'}</td>
+        ${ui.isAdmin?`<td style="white-space:nowrap">${x.email===me?'<span class="muted">自分</span>':`<button class="btn sm" data-act="toggleAdmin" data-id="${esc(x.email)}">${x.is_admin?'スタッフにする':'管理者にする'}</button> <button class="btn sm dan" data-act="delStaff" data-id="${esc(x.email)}">外す</button>`}</td>`:''}</tr>`).join('')}
+      </table>
+      ${ui.isAdmin?`<form data-form="addStaff" style="margin-top:12px">
+        <div class="f2"><div class="f"><label>名前</label><input name="name" required></div><div class="f"><label>メールアドレス</label><input name="email" type="email" required></div></div>
+        <div class="f checks"><label><input type="checkbox" name="is_admin"> 管理者にする（ログインできる人を追加・削除できる）</label></div>
+        <div class="f checks"><label><input type="checkbox" name="as_member" checked> 「担当」の選択肢にも追加する</label></div>
+        <button class="btn pri">追加する</button></form>`:'<div class="muted" style="margin-top:8px">追加・削除は管理者だけができます。</div>'}
+    </div>`;
+}
+
+/* ---------- 全体の描画 ---------- */
+const TABS=[['home','ホーム'],['calendar','カレンダー'],['events','大会'],['routines','通常タスク'],['templates','テンプレ'],['settings','設定']];
+function render(){
+  if(document.querySelector('.ov')) { /* モーダル表示中も裏側は更新する */ }
+  const views={home:viewHome,calendar:viewCalendar,events:()=>ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,templates:viewTemplates,settings:viewSettings};
+  const y=window.scrollY;
+  document.getElementById('app').innerHTML=`
+    <header><div class="bar"><h1>モルマニ タスク管理</h1>${DB.mode==='local'?'<span class="badge">お試しモード</span>':''}</div>
+      <nav>${TABS.map(([k,l])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-id="${k}">${l}</button>`).join('')}</nav></header>
+    <main>${views[ui.tab]()}</main>`;
+  window.scrollTo(0,y);
+}
+function renderLogin(msg='',mode='login'){
+  const su=mode==='signup';
+  document.getElementById('app').innerHTML=`<div class="login"><div class="card">
+    <h1 style="font-size:18px;margin:0 0 4px">モルマニ タスク管理</h1>
+    <p class="muted" style="margin-top:0">運営スタッフ専用です。</p>
+    <div class="chips" style="margin-bottom:12px"><button class="chip ${su?'':'on'}" data-act="loginMode" data-id="login">ログイン</button>
+      <button class="chip ${su?'on':''}" data-act="loginMode" data-id="signup">はじめての方</button></div>
+    ${su?'<p class="muted">管理者に追加してもらったメールアドレスで、パスワードを決めてください（8文字以上）。</p>':''}
+    <form data-form="${su?'signup':'login'}">
+      <div class="f"><label>メールアドレス</label><input name="email" type="email" required autocomplete="username"></div>
+      <div class="f"><label>パスワード</label><input name="password" type="password" required minlength="${su?8:1}" autocomplete="${su?'new-password':'current-password'}"></div>
+      ${su?'<div class="f"><label>パスワード（確認のためもう一度）</label><input name="password2" type="password" required autocomplete="new-password"></div>':''}
+      ${msg?`<div class="${/しました/.test(msg)?'note':'alert'}">${esc(msg)}</div>`:''}
+      <div class="foot"><button class="btn pri" style="width:100%">${su?'登録する':'ログイン'}</button></div>
+    </form></div></div>`;
+}
+function renderNoAccess(){
+  document.getElementById('app').innerHTML=`<div class="login"><div class="card">
+    <h1 style="font-size:18px;margin:0 0 8px">アクセスできません</h1>
+    <p>${esc(ui.user&&ui.user.email)} は「ログインできる人」に入っていません。管理者に追加をお願いしてください。</p>
+    <button class="btn" data-act="logout">ログアウト</button></div></div>`;
+}
+
+/* ---------- 入力用の小窓 ---------- */
+let modalSubmit=null;
+function openModal(title,body,onSubmit,{danger}={}){
+  closeModal();
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<form class="modal" data-form="modal"><h3>${esc(title)}</h3>${body}
+    <div class="foot">${danger?`<button type="button" class="btn dan" data-act="modalDanger">${esc(danger.label)}</button>`:''}<span class="sp"></span>
+    <button type="button" class="btn" data-act="closeModal">閉じる</button><button class="btn pri">保存</button></div></form>`;
+  ov.addEventListener('mousedown',e=>{if(e.target===ov) closeModal()});
+  document.body.appendChild(ov);
+  modalSubmit=onSubmit; ov._danger=danger&&danger.fn;
+  const f=ov.querySelector('input,textarea,select'); if(f) f.focus();
+  return ov;
+}
+function closeModal(){document.querySelectorAll('.ov').forEach(o=>o.remove());modalSubmit=null}
+const memberOptions=sel=>`<option value="">（未定）</option>${S.members.map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(m.name)}</option>`).join('')}`;
+
+function taskForm(t){
+  const evOpts=`<option value="">（大会に関係ない単発タスク）</option>${[...S.events].sort((a,b)=>a.date<b.date?-1:1).map(e=>`<option value="${e.id}" ${e.id===t.event_id?'selected':''}>${esc(e.name)}（${md(e.date)}）</option>`).join('')}`;
+  return `<div class="f"><label>タスク</label><input name="title" value="${esc(t.title)}" required></div>
+    <div class="f2"><div class="f"><label>期限</label><input name="due" type="date" value="${esc(t.due)}" required></div>
+      <div class="f"><label>状況</label><select name="status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===t.status?'selected':''}>${v[1]}</option>`).join('')}</select></div></div>
+    <div class="f2"><div class="f"><label>担当</label><select name="assignee">${memberOptions(t.assignee)}</select></div>
+      <div class="f"><label>大項目</label><input name="category" value="${esc(t.category)}"></div></div>
+    <div class="f"><label>大会</label><select name="event_id">${evOpts}</select></div>
+    <div class="f2"><div class="f"><label>マニュアル名</label><input name="manual_name" value="${esc(t.manual_name)}"></div>
+      <div class="f"><label>マニュアルのリンク（Googleドキュメント等）</label><input name="manual_url" type="url" value="${esc(t.manual_url)}" placeholder="https://docs.google.com/..."></div></div>
+    <div class="f"><label>メモ</label><textarea name="memo">${esc(t.memo)}</textarea></div>`;
+}
+function editTask(id,presetEvent){
+  const isNew=!id;
+  const base=isNew?{id:uid(),event_id:presetEvent||null,template_id:null,category:'その他',title:'',due:today(),days:null,status:'todo',assignee:ui.who||null,manual_name:'',manual_url:'',memo:'',sort:9999}
+    :S.tasks.find(x=>x.id===id);
+  openModal(isNew?'タスクを追加':'タスクの詳細',taskForm(base),fd=>{
+    const t={...base,...fd,assignee:fd.assignee||null,event_id:fd.event_id||null};
+    const ev=t.event_id?evById(t.event_id):null; t.days=ev?diffDays(t.due,ev.date):null;
+    put('tasks',t); closeModal(); toast(isNew?'追加しました':'保存しました');
+  },isNew?{}:{danger:{label:'このタスクを削除',fn:()=>{if(confirm(`「${base.title}」を削除します。元に戻せません。よろしいですか？`)){del('tasks',base.id);closeModal()}}}});
+}
+
+function eventForm(ev,isNew){
+  const tags=tagList();
+  return `<div class="f"><label>大会名</label><input name="name" value="${esc(ev.name)}" required placeholder="例：川崎S.7-4"></div>
+    <div class="f"><label>大会日</label><input name="date" type="date" value="${esc(ev.date)}" required></div>
+    ${isNew&&tags.length?`<div class="f"><label>この大会でやること（外すと関係するタスクが作られません）</label><div class="checks">
+      ${tags.map(x=>`<label><input type="checkbox" name="tag" value="${esc(x)}" ${(ev.tags||[]).includes(x)?'checked':''}> ${esc(x)}</label>`).join('')}</div></div>`:''}
+    ${!isNew?`<div class="f checks"><label><input type="checkbox" name="shift" checked> 大会日を変えたら、未完了タスクの期限も同じ日数だけずらす</label></div>`:''}
+    <div class="f"><label>メモ</label><textarea name="memo">${esc(ev.memo||'')}</textarea></div>
+    ${isNew?'<div class="muted" id="pv"></div>':''}`;
+}
+function previewEvent(form){
+  const pv=form.querySelector('#pv'); if(!pv) return;
+  const date=form.date.value; if(!date){pv.textContent='';return}
+  const tags=[...form.querySelectorAll('[name=tag]:checked')].map(x=>x.value);
+  const ts=tasksFromTemplates({id:'x',date,tags});
+  const late=ts.filter(t=>t.due<today()).length;
+  pv.innerHTML=`${ts.length}件のタスクが作られます。${late?`<div class="alert">うち${late}件は、すでに期限を過ぎた状態で作られます（期限切れとして表示されます）。</div>`:''}`;
+}
+function newEvent(){
+  const ev={name:'',date:'',tags:tagList(),memo:''};
+  const ov=openModal('大会を登録',eventForm(ev,true),fd=>{
+    const e={id:uid(),name:fd.name,date:fd.date,tags:fd.tag,memo:fd.memo||''};
+    const ts=tasksFromTemplates(e);
+    S.events.push(e); put('events',e); put('tasks',ts);
+    closeModal(); ui.tab='events'; ui.eventId=e.id; render(); toast(`登録しました。タスクを${ts.length}件作りました`);
+  });
+  const form=ov.querySelector('form'); form.addEventListener('input',()=>previewEvent(form)); previewEvent(form);
+}
+function editEvent(id){
+  const ev=evById(id);
+  openModal('大会情報を編集',eventForm(ev,false),fd=>{
+    const diff=diffDays(fd.date,ev.date);
+    const e={...ev,name:fd.name,date:fd.date,memo:fd.memo||''};
+    put('events',e);
+    if(diff&&fd.shift){
+      const ts=S.tasks.filter(t=>t.event_id===id&&t.status!=='done').map(t=>({...t,due:addDays(t.due,diff)}));
+      put('tasks',ts);
+    }
+    closeModal(); toast('保存しました');
+  },{danger:{label:'大会を削除',fn:()=>{
+    const n=S.tasks.filter(t=>t.event_id===id).length;
+    if(confirm(`「${ev.name}」と、そのタスク${n}件をすべて削除します。元に戻せません。よろしいですか？`)){
+      del('tasks',S.tasks.filter(t=>t.event_id===id).map(t=>t.id)); del('events',id); ui.eventId=null; closeModal();
+    }}}});
+}
+
+function editTemplate(id){
+  const isNew=!id;
+  const base=isNew?{id:uid(),category:'',title:'',days:-7,manual_name:'',manual_url:'',tag:'',memo:'',sort:S.templates.length}:S.templates.find(x=>x.id===id);
+  const cats=[...new Set(S.templates.map(t=>t.category))];
+  const when=base.days<0?'before':base.days===0?'day':'after';
+  openModal(isNew?'テンプレに追加':'テンプレを編集',`
+    <div class="f"><label>タスク</label><input name="title" value="${esc(base.title)}" required></div>
+    <div class="f2"><div class="f"><label>大項目</label><input name="category" list="cats" value="${esc(base.category)}" required><datalist id="cats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+      <div class="f"><label>いつ</label><div class="row" style="flex-wrap:nowrap"><input name="n" type="number" min="0" value="${Math.abs(base.days)}" style="width:80px">
+        <select name="when"><option value="before" ${when==='before'?'selected':''}>日前</option><option value="day" ${when==='day'?'selected':''}>（大会当日）</option><option value="after" ${when==='after'?'selected':''}>日後</option></select></div></div></div>
+    <div class="f2"><div class="f"><label>マニュアル名</label><input name="manual_name" value="${esc(base.manual_name)}"></div>
+      <div class="f"><label>マニュアルのリンク</label><input name="manual_url" type="url" value="${esc(base.manual_url)}" placeholder="https://docs.google.com/..."></div></div>
+    <div class="f"><label>条件タグ（空なら全大会で作る。例：キッチンカー）</label><input name="tagname" list="tags" value="${esc(base.tag)}"><datalist id="tags">${tagList().map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+    <div class="f"><label>メモ（タスクにも引き継がれます）</label><textarea name="memo">${esc(base.memo)}</textarea></div>`,fd=>{
+      const n=Math.abs(parseInt(fd.n||'0',10)), days=fd.when==='before'?-n:fd.when==='after'?n:0;
+      put('templates',{...base,title:fd.title,category:fd.category,days,manual_name:fd.manual_name,manual_url:fd.manual_url,tag:(fd.tagname||'').trim(),memo:fd.memo});
+      closeModal(); toast('テンプレを保存しました');
+    },isNew?{}:{danger:{label:'テンプレから削除',fn:()=>{if(confirm(`テンプレから「${base.title}」を削除します。登録済みの大会のタスクは残ります。よろしいですか？`)){del('templates',base.id);closeModal()}}}});
+}
+
+function editRoutine(id){
+  const isNew=!id;
+  const base=isNew?{id:uid(),title:'',kind:'weekly',dow:4,dom:null,assignee:null,manual_url:'',memo:'',sort:S.routines.length}:S.routines.find(x=>x.id===id);
+  openModal(isNew?'ルーティンを追加':'ルーティンを編集',`
+    <div class="f"><label>タスク</label><input name="title" value="${esc(base.title)}" required></div>
+    <div class="f2"><div class="f"><label>くり返し</label><select name="kind"><option value="daily" ${base.kind==='daily'?'selected':''}>毎日</option><option value="weekly" ${base.kind==='weekly'?'selected':''}>毎週</option><option value="monthly" ${base.kind==='monthly'?'selected':''}>毎月</option></select></div>
+      <div class="f"><label>曜日（毎週のとき）／日にち（毎月のとき）</label><div class="row" style="flex-wrap:nowrap">
+        <select name="dow">${WD.map((w,i)=>`<option value="${i}" ${Number(base.dow)===i?'selected':''}>${w}曜</option>`).join('')}</select>
+        <input name="dom" type="number" min="1" max="31" value="${base.dom||1}" style="width:70px"><span class="muted">日</span></div></div></div>
+    <div class="f"><label>担当</label><select name="assignee">${memberOptions(base.assignee)}</select></div>
+    <div class="f"><label>マニュアルのリンク</label><input name="manual_url" type="url" value="${esc(base.manual_url)}"></div>
+    <div class="f"><label>メモ</label><textarea name="memo">${esc(base.memo)}</textarea></div>`,fd=>{
+      put('routines',{...base,title:fd.title,kind:fd.kind,dow:fd.kind==='weekly'?Number(fd.dow):null,dom:fd.kind==='monthly'?Number(fd.dom):null,assignee:fd.assignee||null,manual_url:fd.manual_url,memo:fd.memo});
+      closeModal(); toast('保存しました');
+    },isNew?{}:{danger:{label:'削除',fn:()=>{if(confirm(`「${base.title}」を削除します。よろしいですか？`)){del('routine_checks',S.routine_checks.filter(c=>c.routine_id===base.id).map(c=>c.id));del('routines',base.id);closeModal()}}}});
+}
+
+/* ---------- 操作 ---------- */
+const ACT={
+  tab:d=>{ui.tab=d.id;ui.eventId=null;render();window.scrollTo(0,0)},
+  who:d=>{ui.who=d.id;lsSet('mm_who',d.id);render()},
+  cycle:d=>{const t=S.tasks.find(x=>x.id===d.id);const nx={todo:'wip',wip:'done',done:'todo'}[t.status];put('tasks',{...t,status:nx});toast(`「${t.title}」を${STATUS[nx][1]}にしました`)},
+  editTask:d=>editTask(d.id),
+  newTask:d=>editTask(null,d.id),
+  checkRoutine:d=>{const c=S.routine_checks.find(x=>x.routine_id===d.id&&x.date===d.day);
+    if(c) del('routine_checks',c.id); else put('routine_checks',{id:uid(),routine_id:d.id,date:d.day});},
+  editRoutine:d=>editRoutine(d.id), newRoutine:()=>editRoutine(null),
+  openEvent:d=>{ui.tab='events';ui.eventId=d.id;render();window.scrollTo(0,0)},
+  back:()=>{ui.eventId=null;render()},
+  evMode:d=>{ui.evMode=d.id;render()},
+  newEvent:()=>newEvent(), editEvent:d=>editEvent(d.id),
+  editTemplate:d=>editTemplate(d.id), newTemplate:()=>editTemplate(null),
+  calDay:d=>{ui.calDay=d.id;render()},
+  calMove:d=>{const n=Number(d.id);if(!n){ui.calMonth=today().slice(0,7);ui.calDay=today()}else{const [y,m]=ui.calMonth.split('-').map(Number);const x=new Date(y,m-1+n,1);ui.calMonth=ymd(x).slice(0,7)}render()},
+  delMember:d=>{const m=S.members.find(x=>x.id===d.id);if(confirm(`「${m.name}」を削除します。担当になっているタスクは「担当未定」に戻ります。よろしいですか？`)){
+    put('tasks',S.tasks.filter(t=>t.assignee===m.id).map(t=>({...t,assignee:null})));
+    put('routines',S.routines.filter(t=>t.assignee===m.id).map(t=>({...t,assignee:null})));
+    if(ui.who===m.id){ui.who='';lsSet('mm_who','')} del('members',m.id)}},
+  closeModal:()=>closeModal(),
+  modalDanger:()=>{const ov=document.querySelector('.ov');ov&&ov._danger&&ov._danger()},
+  exportData:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download=`モルマニタスク_控え_${today()}.json`;a.click()},
+  importData:()=>{const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{const d=JSON.parse(await i.files[0].text());
+    if(!confirm('今のデータを、読み込んだファイルの中身で置き換えます。よろしいですか？'))return;for(const t of TABLES)S[t]=d[t]||[];LocalDB.save();render();toast('読み込みました')}catch(e){toast('読み込めませんでした')}};i.click()},
+  resetDemo:()=>{if(confirm('このブラウザに入っているデータを消して、お試しデータに戻します。よろしいですか？')){for(const t of TABLES)S[t]=[];seedDemo();LocalDB.save();render();toast('お試しデータに戻しました')}},
+  logout:async()=>{await CloudDB.sb.auth.signOut();location.reload()},
+  loginMode:d=>renderLogin('',d.id),
+  delStaff:async d=>{const x=S.staff.find(y=>y.email===d.id);
+    if(!confirm(`${x.name||x.email} をログインできる人から外します。この人はすぐにアプリを見られなくなります。よろしいですか？`))return;
+    const {error}=await CloudDB.sb.from('staff_access').delete().eq('email',x.email);
+    if(error){toast('外せませんでした：'+error.message);return}
+    S.staff=S.staff.filter(y=>y.email!==x.email);render();toast('外しました')},
+  toggleAdmin:async d=>{const x=S.staff.find(y=>y.email===d.id);
+    const {error}=await CloudDB.sb.from('staff_access').update({is_admin:!x.is_admin}).eq('email',x.email);
+    if(error){toast('変更できませんでした：'+error.message);return}
+    x.is_admin=!x.is_admin;render();toast('変更しました')},
+};
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  if(el.tagName==='A') return;
+  e.preventDefault(); const f=ACT[el.dataset.act]; if(f) f(el.dataset,el,e);
+});
+document.addEventListener('submit',async e=>{
+  const form=e.target; const kind=form.dataset.form; if(!kind) return;
+  e.preventDefault();
+  const fd={}; for(const [k,v] of new FormData(form)){ if(k==='tag'){(fd.tag=fd.tag||[]).push(v)} else fd[k]=v }
+  if(kind==='modal'){ if(!fd.tag) fd.tag=[]; if(modalSubmit) modalSubmit(fd); }
+  if(kind==='addMember'){ put('members',{id:uid(),name:fd.name.trim(),sort:S.members.length}); }
+  if(kind==='addStaff'){
+    const row={email:fd.email.trim().toLowerCase(),name:fd.name.trim(),is_admin:!!fd.is_admin};
+    const {error}=await CloudDB.sb.from('staff_access').insert(row);
+    if(error){toast(/duplicate/.test(error.message)?'そのメールアドレスはもう入っています':'追加できませんでした：'+error.message);return}
+    S.staff.push(row);
+    if(fd.as_member&&!S.members.some(m=>m.name===row.name)) put('members',{id:uid(),name:row.name,sort:S.members.length});
+    render(); toast(`${row.name}さんを追加しました。「はじめての方」から登録するよう伝えてください`);
+  }
+  if(kind==='signup'){
+    if(fd.password!==fd.password2){renderLogin('パスワードが2回とも同じになっていません','signup');return}
+    const {data,error}=await CloudDB.sb.auth.signUp({email:fd.email.trim().toLowerCase(),password:fd.password});
+    if(error){renderLogin(/許可|not allowed|hook/i.test(error.message)?'このメールアドレスはまだ登録が許可されていません。管理者に追加してもらってください。':/registered|exists/i.test(error.message)?'このメールアドレスはもう登録済みです。「ログイン」から入ってください。':'登録できませんでした：'+error.message,'signup');return}
+    if(!data.session){renderLogin('登録しました。「ログイン」から入ってください。','login');return}
+    location.reload();
+  }
+  if(kind==='login'){
+    const {error}=await CloudDB.sb.auth.signInWithPassword({email:fd.email,password:fd.password});
+    if(error){renderLogin('ログインできませんでした。メールアドレスとパスワードを確かめてください。');return}
+    location.reload();
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState==='visible'&&DB.mode==='cloud'&&ui.user&&!document.querySelector('.ov')){try{await DB.loadAll();render()}catch(e){}}
+});
+
+(async function boot(){
+  try{
+    const ok=await DB.init();
+    if(!ok){renderLogin();return}
+    await DB.loadAll();
+    if(ui.noAccess){renderNoAccess();return}
+    render();
+  }catch(e){
+    document.getElementById('app').innerHTML=`<div class="login"><div class="alert">読み込みに失敗しました：${esc(e.message)}</div></div>`;
+  }
+})();
+</script>
+</body>
+</html>
