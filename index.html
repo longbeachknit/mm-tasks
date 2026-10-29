@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<script>/* LINE の中で開いたら、Safari などふつうのブラウザで開き直す */
+(function(){try{if(/\bLine\//i.test(navigator.userAgent)&&!/[?&]openExternalBrowser=1/.test(location.search)){var u=new URL(location.href);u.searchParams.set('openExternalBrowser','1');location.replace(u.toString())}}catch(e){}})();</script>
 <title>モルマニ タスク管理</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -169,6 +171,59 @@ input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-co
 .login{max-width:360px;margin:12vh auto;padding:0 16px}
 @media (max-width:560px){.cell{min-height:56px}.cell .evc,.cell .rt{display:none}.cell .evd{display:block;width:6px;height:6px;border-radius:50%;margin-top:3px}.f2{grid-template-columns:1fr}}
 @media (min-width:561px){.cell .evd{display:none}}
+/* 第6版：黒を基調にした落ち着いた配色 */
+:root{--bg:#F6F6F4;--card:#fff;--ink:#141414;--sub:#6b6b6b;--line:#E4E4E0;--accent-soft:#F1F1EE;--link:#141414;
+  --pri:#141414;--pri-ink:#fff;--wip:#a07800;--wip-soft:#FFF6D6;--ok:#141414;--ok-soft:#EFEFEC;--warn:#8a6400;--warn-soft:#FBF5E3}
+@media (prefers-color-scheme:dark){:root{--bg:#111;--card:#1c1c1c;--ink:#f1f1ee;--sub:#a3a3a0;--line:#333;--accent-soft:#2a2a2a;--link:#f1f1ee;
+  --pri:#f1f1ee;--pri-ink:#111;--wip:#FFCB3D;--wip-soft:#3a3013;--ok:#f1f1ee;--ok-soft:#2a2a2a;--warn:#f5c04a;--warn-soft:#2e2714}}
+header{background:#111;color:#fff;box-shadow:none}
+.badge{background:var(--accent);color:#111}
+nav button{color:rgba(255,255,255,.62)}
+nav button:hover{color:#fff}
+nav button.on{color:var(--ink);background:var(--bg)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:var(--pri-ink)}
+.btn.pri:hover{background:var(--pri);opacity:.85}
+.chip.on{background:var(--pri);border-color:var(--pri);color:var(--pri-ink)}
+.tag{background:var(--accent-soft);color:var(--sub)}
+.task{border-left:1px solid var(--line)}
+.task.st-wip{border-left:4px solid var(--accent);box-shadow:none}
+.st-done .st{color:var(--pri-ink)}
+.cell.sel{outline:2px solid var(--ink)}
+.cell.td .d{color:var(--pri-ink);background:var(--pri)}
+.cell .cnt{color:var(--ink)}
+.cat{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.dayhead.cathead{border-left:4px solid var(--ink);background:var(--accent-soft)}
+.catprog .cp{background:var(--accent-soft)}
+.chatbtn.has{color:var(--ink);border-color:var(--sub)}
+.meta .who{color:var(--ink)}
+.evn{display:inline-flex;align-items:center;gap:4px}
+.cdot{width:7px;height:7px}
+.prog i,.barbg i{background:var(--ink)}
+.login .card{border-top:6px solid #111}
+#newver{background:#111;color:#fff}
+.tbl tr.on td{background:var(--accent-soft);font-weight:700}
+/* 実績のグラフ */
+.repctl{display:flex;flex-direction:column;gap:8px}
+.repctl .lbl{min-width:28px}
+.chart{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px 6px;-webkit-overflow-scrolling:touch}
+.bars{display:flex;gap:2px;min-width:100%}
+.bc{flex:1 0 32px;display:flex;flex-direction:column;align-items:center;border:0;background:none;padding:2px 0 4px;cursor:pointer;border-radius:8px;color:inherit}
+.bc .bv{font-size:11px;height:16px;color:var(--sub)}
+.bc .bb{height:130px;width:64%;max-width:28px;display:flex;align-items:flex-end;background:var(--bg);border-radius:4px;overflow:hidden}
+.bc .bb i{display:block;width:100%;background:var(--ink);border-radius:3px 3px 0 0}
+.bc .bl{font-size:10px;color:var(--sub);margin-top:4px;white-space:nowrap;line-height:1.2;text-align:center}
+.bc .bl small{display:block;font-size:9px}
+.bc.td .bl{color:var(--ink);font-weight:700}
+.bc.on{background:var(--accent-soft)}
+.bc.on .bb i{background:var(--accent)}
+.bc.on .bv{color:var(--ink);font-weight:700}
+/* スマホで右にはみ出さないように */
+html,body{max-width:100%;overflow-x:hidden}
+@supports (overflow-x:clip){html,body{overflow-x:clip}}
+.modal{min-width:0;max-width:min(560px,100%)}
+.cmt .cb,.chatrow .b,.task .t{overflow-wrap:anywhere}
+#cbody{min-width:0;flex:1}
+@media (max-width:760px){input,select,textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -185,7 +240,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='20261029-212932';   // 反映のたびに変える（新しい版のお知らせに使う）
+const APP_VERSION='20261029-214727';   // 反映のたびに変える（新しい版のお知らせに使う）
 const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads'];
 const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],staff:[]};
 const ui = {tab:'home', who:lsGet('mm_who')||'', sort:lsGet('mm_sort')||'date', eventId:null, evFilter:'', setId:null,
@@ -212,7 +267,7 @@ const bySort=(a,b)=>(a.sort||0)-(b.sort||0);
 function catList(){return [...S.categories].sort(bySort).map(c=>c.name)}
 function catIndex(n){const i=catList().indexOf(n);return i<0?999:i}
 const byDue=(a,b)=>a.due<b.due?-1:a.due>b.due?1:(catIndex(a.category)-catIndex(b.category))||bySort(a,b);
-const CAT_COLORS=['#3B82F6','#E8590C','#1D9E75','#8B5CF6','#EC4899','#14B8A6','#E24B4A','#84CC16','#0EA5E9','#A855F7','#F97316','#64748B'];
+const CAT_COLORS=['#4a6fa5','#b8743a','#4f8a6e','#7b68a6','#a65d7e','#4f8f8a','#b05a52','#7d8f4a','#5b8db0','#8e6aa6','#b8863a','#6b7280'];
 function catColor(n){const l=[...S.categories].sort(bySort);const i=l.findIndex(c=>c.name===n);if(i<0)return '#9ca3af';return l[i].color||CAT_COLORS[i%CAT_COLORS.length]}
 const catChip=n=>n?`<span class="cat" style="--c:${catColor(n)}"><i></i>${esc(n)}</span>`:'';
 const sets=()=>[...S.template_sets].sort(bySort);
@@ -221,7 +276,7 @@ const evById=id=>S.events.find(e=>e.id===id);
 const memName=id=>(S.members.find(m=>m.id===id)||{}).name||'';
 const myEmail=()=>DB.mode==='cloud'?((ui.user&&ui.user.email)||'').toLowerCase():'demo@local';
 const myName=()=>{const s=S.staff.find(x=>x.email===myEmail());return s&&s.name?s.name:(DB.mode==='cloud'?myEmail():'あなた')};
-const EV_COLORS=['#2f6fed','#e8590c','#0ca678','#ae3ec9','#d6336c','#1098ad','#f59f00','#5c7cfa'];
+const EV_COLORS=['#3d4a5c','#8a6a2f','#4b6b58','#6b4f6e','#8a4b4b','#3f6670','#6f6a3a','#55525e'];
 function evColor(id){const sorted=[...S.events].sort((a,b)=>a.date<b.date?-1:1);const i=sorted.findIndex(e=>e.id===id);return EV_COLORS[(i<0?0:i)%EV_COLORS.length]}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3200)}
 function loadScript(src){return new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)})}
@@ -437,13 +492,15 @@ const nameOptions=sel=>{const l=[...new Set([...S.staff.map(x=>x.name),...S.memb
 /* チャットの既読 */
 const tms=x=>x?new Date(x).getTime():0;
 const readId=tid=>myEmail()+'|'+tid;
-const myRead=tid=>{const r=S.comment_reads.find(x=>x.id===readId(tid));return r?tms(r.read_at):0};
+const rawRead=tid=>{const r=S.comment_reads.find(x=>x.id===readId(tid));return r?tms(r.read_at):0};
+const myBase=()=>ui.user&&ui.user.created_at?tms(ui.user.created_at):0;   // 使い始める前のチャットは既読あつかい
+const myRead=tid=>Math.max(rawRead(tid),myBase());
 const unreadOf=tid=>commentsOf(tid).filter(c=>c.author_email!==myEmail()&&tms(c.created_at)>myRead(tid)).length;
 const chatTaskIds=()=>[...new Set(S.comments.map(c=>c.task_id))].filter(id=>S.tasks.some(t=>t.id===id));
 const unreadThreads=()=>chatTaskIds().filter(id=>unreadOf(id)>0).length;
 function markRead(tid){
   if(!commentsOf(tid).length) return;              // チャットがまだ無い
-  if(!unreadOf(tid)&&myRead(tid)) return;           // もう読んである
+  if(!unreadOf(tid)&&rawRead(tid)) return;           // もう読んである
   S.comment_reads=S.comment_reads.filter(x=>x.id!==readId(tid));
   put('comment_reads',{id:readId(tid),user_email:myEmail(),task_id:tid,read_at:new Date().toISOString()}); }
 const linksOf=t=>Array.isArray(t.links)?t.links:[];
@@ -466,7 +523,7 @@ function taskRow(t,{showEvent=true}={}){
       <div class="t">${esc(t.title)}</div>
       <div class="meta">
         <span class="${late?'late':''}">${md(t.due)}・${rel(t.due)}</span>
-        ${showEvent?(ev?`<span style="color:${evColor(ev.id)}">● ${esc(evName(ev))}</span>`:'<span>単発タスク</span>'):''}
+        ${showEvent?(ev?`<span class="evn"><i class="cdot" style="--c:${evColor(ev.id)}"></i>${esc(evName(ev))}</span>`:'<span>単発タスク</span>'):''}
         ${ui.sort!=='cat'&&t.category?catChip(t.category):''}
         ${t.assignee?`<span>担当：${esc(memName(t.assignee))}</span>`:`<span class="noone">担当未定</span>`}
         ${t.effort?`<span>工数${Number(t.effort)}</span>`:''}
@@ -573,26 +630,62 @@ function todayDone(){
     <div class="chips" style="margin-bottom:6px">${Object.entries(by).map(([k,m])=>`<span class="tag gray">${esc(k)}：工数${m}</span>`).join('')}</div>
     <div class="list">${ds.map(x=>taskRow(x)).join('')}</div>`;
 }
+/* 実績の期間 */
+const REP_P=[['today','今日'],['yesterday','昨日'],['week','直近7日'],['thisweek','今週'],['lastweek','先週'],['d30','直近30日'],['month','今月'],['lastmonth','先月'],['all','すべて'],['custom','期間を指定']];
+function repRange(){
+  const t=today(), d=parse(t), dow=(d.getDay()+6)%7;   // 週は月曜はじまり
+  const first=S.tasks.map(doneDay).filter(Boolean).sort()[0]||t;
+  const R={today:[t,t],yesterday:[addDays(t,-1),addDays(t,-1)],week:[addDays(t,-6),t],thisweek:[addDays(t,-dow),t],lastweek:[addDays(t,-dow-7),addDays(t,-dow-1)],
+    d30:[addDays(t,-29),t],month:[t.slice(0,8)+'01',t],lastmonth:[ymd(new Date(d.getFullYear(),d.getMonth()-1,1)),ymd(new Date(d.getFullYear(),d.getMonth(),0))],
+    all:[first<t?first:t,t],custom:[ui.repFrom||addDays(t,-6),ui.repTo||t]};
+  let [x,y]=R[ui.period]||R.week; if(x>y)[x,y]=[y,x]; return [x,y];
+}
 function viewReport(){
-  const p=ui.period||'week', t=today();
-  const from={today:t,week:addDays(t,-6),month:t.slice(0,8)+'01',all:'0000-00-00'}[p];
-  const ds=S.tasks.filter(x=>x.status==='done'&&doneDay(x)&&doneDay(x)>=from);
-  const by={}; ds.forEach(x=>{const k=x.done_by||'（不明）';(by[k]=by[k]||{n:0,m:0});by[k].n++;by[k].m+=Number(x.effort||0)});
-  const rows=Object.entries(by).sort((a,b)=>b[1].m-a[1].m||b[1].n-a[1].n);
-  const max=Math.max(1,...rows.map(r=>r[1].m));
-  const total=ds.reduce((a,x)=>a+Number(x.effort||0),0);
+  const p=ui.period||'week', unit=ui.repUnit||'n', who=ui.repWho||'';
+  const [from,to]=repRange(), span=diffDays(to,from)+1;
+  const whoOf=x=>x.done_by||'（不明）';
+  const inRange=S.tasks.filter(x=>x.status==='done'&&doneDay(x)&&doneDay(x)>=from&&doneDay(x)<=to);
+  const ds=inRange.filter(x=>!who||whoOf(x)===who);
+  const eff=xs=>xs.reduce((a,x)=>a+Number(x.effort||0),0);
+  const val=xs=>unit==='m'?eff(xs):xs.length;
+  const U=v=>unit==='m'?`工数${fmtMin(v)}`:`${v}件`;
+  const people=[...new Set(S.tasks.filter(x=>x.status==='done'&&x.done_at).map(whoOf))].sort();
+  /* 人ごと */
+  const by={}; inRange.forEach(x=>{(by[whoOf(x)]=by[whoOf(x)]||[]).push(x)});
+  const rows=Object.entries(by).sort((a,b)=>val(b[1])-val(a[1])||b[1].length-a[1].length);
+  const max=Math.max(1,...rows.map(r=>val(r[1])));
+  /* 日ごと（63日以上は週ごと） */
+  const weekly=span>62, bk=[];
+  if(!weekly){for(let d=from;d<=to;d=addDays(d,1))bk.push({k:d,a:d,b:d})}
+  else{for(let w=addDays(from,-((parse(from).getDay()+6)%7));w<=to;w=addDays(w,7))bk.push({k:w,a:w<from?from:w,b:addDays(w,6)>to?to:addDays(w,6)})}
+  bk.forEach(x=>{x.xs=ds.filter(t=>{const d=doneDay(t);return d>=x.a&&d<=x.b});x.v=val(x.xs)});
+  const bmax=Math.max(1,...bk.map(x=>x.v)), act=bk.filter(x=>x.xs.length).length;
+  const lab=x=>{const d=parse(x.k);return weekly?`${d.getMonth()+1}/${d.getDate()}〜`:`${d.getMonth()+1}/${d.getDate()}<small>${WD[d.getDay()]}</small>`};
+  const sel=bk.find(x=>x.k===ui.repSel);
+  const listOf=xs=>`<div class="list">${[...xs].sort((a,b)=>a.done_at<b.done_at?1:-1).map(x=>taskRow(x)).join('')}</div>`;
   const days=[...new Set(ds.map(doneDay))].sort().reverse();
-  const P=[['today','今日'],['week','この7日間'],['month','今月'],['all','すべて']];
-  return `<div class="chips"><span class="muted">期間：</span>${P.map(([k,l])=>`<button class="chip ${p===k?'on':''}" data-act="period" data-id="${k}">${l}</button>`).join('')}</div>
-    <div class="stat" style="margin-top:12px"><div class="card"><div class="muted">完了したタスク</div><b>${ds.length}件</b></div>
-      <div class="card"><div class="muted">工数の合計</div><b>${fmtMin(total)}</b></div></div>
+  return `<div class="repctl">
+      <div class="chips"><span class="lbl">期間</span>${REP_P.map(([k,l])=>`<button class="chip ${p===k?'on':''}" data-act="period" data-id="${k}">${l}</button>`).join('')}</div>
+      ${p==='custom'?`<div class="row"><input type="date" class="inp" style="width:auto" data-rep="from" value="${from}"><span>〜</span><input type="date" class="inp" style="width:auto" data-rep="to" value="${to}"></div>`:''}
+      <div class="chips"><span class="lbl">集計</span><button class="chip ${unit==='n'?'on':''}" data-act="repUnit" data-id="n">件数</button><button class="chip ${unit==='m'?'on':''}" data-act="repUnit" data-id="m">工数</button></div>
+      <div class="chips"><span class="lbl">人</span><button class="chip ${!who?'on':''}" data-act="repWho" data-id="">全員</button>${people.map(n=>`<button class="chip ${who===n?'on':''}" data-act="repWho" data-id="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+    </div>
+    <div class="muted" style="margin-top:8px">${md(from)}〜${md(to)}（${span}日間）${who?`・${esc(who)}さん`:''}</div>
+    <div class="stat" style="margin-top:8px"><div class="card"><div class="muted">完了したタスク</div><b>${ds.length}件</b></div>
+      <div class="card"><div class="muted">工数の合計</div><b>${fmtMin(eff(ds))}</b></div>
+      <div class="card"><div class="muted">やった${weekly?'週':'日'}</div><b>${act}${weekly?'週':'日'}</b></div>
+      <div class="card"><div class="muted">やった${weekly?'週':'日'}の平均</div><b>${act?U(Math.round(val(ds)/act*10)/10):'−'}</b></div></div>
+    <h2>${weekly?'週':'日'}ごとの${unit==='m'?'工数':'件数'} <span class="n">棒を押すと、その${weekly?'週':'日'}にやったことが出ます</span></h2>
+    <div class="chart" id="repchart"><div class="bars">${bk.map(x=>`<button class="bc ${ui.repSel===x.k?'on':''} ${x.k===today()?'td':''}" data-act="repSel" data-id="${x.k}">
+      <span class="bv">${x.v||''}</span><span class="bb"><i style="height:${Math.round(x.v/bmax*100)}%"></i></span><span class="bl">${lab(x)}</span></button>`).join('')}</div></div>
+    ${sel?`<h2>${weekly?`${md(sel.a)}〜${md(sel.b)}`:md(sel.a)}にやったこと${who?`（${esc(who)}）`:''} <span class="n">${sel.xs.length}件・工数${fmtMin(eff(sel.xs))}</span><span class="sp"></span><button class="btn sm" data-act="repSel" data-id="${sel.k}">閉じる</button></h2>
+      ${sel.xs.length?listOf(sel.xs):'<div class="empty">この日に完了したタスクはありません</div>'}`:''}
     <h2>人ごとの実績</h2>
-    ${rows.length?`<table class="tbl"><tr><th>人</th><th style="width:70px">件数</th><th>工数</th></tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}件</td>
-      <td>${fmtMin(v.m)}<div class="barbg"><i style="width:${Math.round(v.m/max*100)}%"></i></div></td></tr>`).join('')}</table>`:'<div class="empty">この期間に完了したタスクはありません</div>'}
-    <div class="muted" style="margin-top:6px">※「完了」を押した人の実績として数えます。工数が0のタスクは件数だけに入ります。</div>
-    <h2>完了したタスク</h2>
-    ${days.map(d=>`<div class="dayhead">${md(d)}　<span class="n">${ds.filter(x=>doneDay(x)===d).length}件</span></div>
-      <div class="list">${ds.filter(x=>doneDay(x)===d).sort((a,b)=>a.done_at<b.done_at?1:-1).map(x=>taskRow(x)).join('')}</div>`).join('')||''}`;
+    ${rows.length?`<table class="tbl"><tr><th>人</th><th style="width:64px">件数</th><th style="width:40%">工数</th></tr>${rows.map(([k,xs])=>`<tr class="click ${who===k?'on':''}" data-act="repWho" data-id="${who===k?'':esc(k)}"><td>${esc(k)}</td><td>${xs.length}件</td>
+      <td>${fmtMin(eff(xs))}<div class="barbg"><i style="width:${Math.round(val(xs)/max*100)}%"></i></div></td></tr>`).join('')}</table>`:'<div class="empty">この期間に完了したタスクはありません</div>'}
+    <div class="muted" style="margin-top:6px">※「完了」を押した人の実績として数えます。人の行を押すと、その人だけに絞りこめます。</div>
+    ${sel?'':`<h2>完了したタスク${who?`（${esc(who)}）`:''}</h2>
+    ${days.map(d=>{const xs=ds.filter(x=>doneDay(x)===d);return `<div class="dayhead">${md(d)}　<span class="n">${xs.length}件・工数${fmtMin(eff(xs))}</span></div>${listOf(xs)}`}).join('')||'<div class="empty">ありません</div>'}`}`;
 }
 function viewEvents(){
   const t=today(), f=ui.evFilter;
@@ -756,6 +849,8 @@ function render(){
       <nav>${TABS.map(([k,l])=>{const u=k==='chat'?unreadThreads():0;return `<button class="${ui.tab===k?'on':''}" data-act="tab" data-id="${k}">${l}${u?`<span class="dot">${u}</span>`:''}</button>`}).join('')}</nav></header>
     <main>${views[ui.tab]()}</main>`;
   window.scrollTo(0,y);
+  const ch=document.getElementById('repchart');   // 実績のグラフは、いちばん新しい日が見える位置に
+  if(ch){ch.scrollLeft=ui.repScroll??ch.scrollWidth;ch.addEventListener('scroll',()=>{ui.repScroll=ch.scrollLeft},{passive:true})}
 }
 function renderLogin(msg='',mode='login'){
   const su=mode==='signup';
@@ -824,7 +919,7 @@ function openChat(tid){
   ov.addEventListener('mousedown',e=>{if(e.target===ov) closeModal()});
   document.body.appendChild(ov);
   markRead(tid);
-  const ta=document.getElementById('cbody'); if(ta) ta.focus();
+  const ta=document.getElementById('cbody'); if(ta&&!matchMedia('(pointer:coarse)').matches) ta.focus();
 }
 function viewChat(){
   const ids=chatTaskIds().map(id=>{const cs=commentsOf(id).sort((a,b)=>tms(a.created_at)-tms(b.created_at));return {id,last:cs[cs.length-1],n:cs.length}})
@@ -834,7 +929,7 @@ function viewChat(){
     <h2>チャット <span class="n">${ids.length}件${ur?`・未読 ${ur}件`:''}</span></h2>
     ${ids.length?`<div class="list">${ids.map(x=>{const t=S.tasks.find(y=>y.id===x.id),ev=t.event_id&&evById(t.event_id),u=unreadOf(x.id);
       return `<div class="card chatrow ${u?'unread':''}" data-act="openChat" data-id="${x.id}">
-        <div class="b"><div class="row" style="gap:6px"><b>${esc(t.title)}</b>${ev?`<span class="muted" style="color:${evColor(ev.id)}">● ${esc(evName(ev))}</span>`:''}${u?`<span class="dot">${u}</span>`:''}</div>
+        <div class="b"><div class="row" style="gap:6px"><b>${esc(t.title)}</b>${ev?`<span class="muted"><i class="cdot" style="--c:${evColor(ev.id)}"></i> ${esc(evName(ev))}</span>`:''}${u?`<span class="dot">${u}</span>`:''}</div>
           <div class="last"><span class="muted">${esc(x.last.author_name||x.last.author_email)}：</span>${esc(x.last.body)}</div></div>
         <div class="muted" style="white-space:nowrap">${fmtTime(x.last.created_at)}<br>${x.n}件</div></div>`}).join('')}</div>`:'<div class="empty">まだチャットはありません</div>'}`;
 }
@@ -1022,7 +1117,10 @@ function editRoutine(id){
 const ACT={
   tab:d=>{ui.tab=d.id;ui.eventId=null;render();window.scrollTo(0,0)},
   who:d=>{ui.who=d.id;lsSet('mm_who',d.id);render()},
-  period:d=>{ui.period=d.id;render()},
+  period:d=>{if(d.id==='custom'&&!ui.repFrom){[ui.repFrom,ui.repTo]=repRange()}ui.period=d.id;ui.repSel=null;ui.repScroll=null;render()},
+  repUnit:d=>{ui.repUnit=d.id;render()},
+  repWho:d=>{ui.repWho=d.id;render()},
+  repSel:d=>{ui.repSel=ui.repSel===d.id?null:d.id;render()},
   sort:d=>{ui.sort=d.id;lsSet('mm_sort',d.id);render()},
   cycle:d=>{const t=S.tasks.find(x=>x.id===d.id);const nx={todo:'wip',wip:'done',done:'todo',skip:'todo'}[t.status]||'todo';put('tasks',withStatus(t,nx));toast(`「${t.title}」を${STATUS[nx][1]}にしました`)},
   skip:d=>{const t=S.tasks.find(x=>x.id===d.id);put('tasks',withStatus(t,'skip'));toast(`「${t.title}」を不要にしました（丸を押すと戻せます）`)},
@@ -1096,6 +1194,9 @@ document.addEventListener('click',e=>{
   e.preventDefault(); const f=ACT[el.dataset.act]; if(f) f(el.dataset,el,e);
 });
 const ARRAY_FIELDS=['tpl','link_name','link_url'];
+/* 実績：期間を指定 */
+document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.rep||!el.value)return;
+  if(el.dataset.rep==='from')ui.repFrom=el.value;else ui.repTo=el.value;ui.repSel=null;ui.repScroll=null;render()});
 /* カテゴリの色を変える */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.catcolor)return;
   const c=S.categories.find(x=>x.id===el.dataset.catcolor);if(c){put('categories',{...c,color:el.value});toast(`「${c.name}」の色を変えました`)}});
