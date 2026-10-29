@@ -8,50 +8,52 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
-  --bg:#f5f6f8;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e4e7ec;
-  --accent:#2f6fed;--accent-soft:#e8efff;--danger:#c4320a;--danger-soft:#fdeee9;
-  --warn:#b54708;--warn-soft:#fef4e6;--ok:#067647;--ok-soft:#e5f5eb;--wip:#7a5af8;--wip-soft:#f0edff;
+  --bg:#FFFAEB;--card:#fff;--ink:#1a1a1a;--sub:#6b7280;--line:#EFE7CC;
+  --accent:#FFCB3D;--accent-strong:#F2B705;--accent-ink:#2b2100;--accent-soft:#FFF3C4;--link:#9a6700;
+  --danger:#E24B4A;--danger-soft:#FFF0EF;--warn:#b45309;--warn-soft:#FFF3C4;--ok:#1D9E75;--ok-soft:#E3F6EF;--wip:#7a5af8;--wip-soft:#f0edff;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#12151c;--card:#1b2029;--ink:#e6e9ef;--sub:#98a2b3;--line:#2c3340;
-  --accent:#6b9bff;--accent-soft:#1f2b45;--danger:#ff7a5c;--danger-soft:#3a1f1a;
-  --warn:#f5a54a;--warn-soft:#3a2a15;--ok:#4cc38a;--ok-soft:#173326;--wip:#a48afb;--wip-soft:#2a2342;
+  --bg:#16130b;--card:#211d13;--ink:#f3efe2;--sub:#a8a293;--line:#3a3322;
+  --accent:#FFCB3D;--accent-strong:#F2B705;--accent-ink:#2b2100;--accent-soft:#3a3013;--link:#FFCB3D;
+  --danger:#ff7b6e;--danger-soft:#3a1f1c;--warn:#f5b84a;--warn-soft:#3a3013;--ok:#3cc795;--ok-soft:#163328;--wip:#a48afb;--wip-soft:#2a2342;
 }}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px;line-height:1.5}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--accent)}
-header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+a{color:var(--link)}
+header{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);box-shadow:0 1px 0 rgba(0,0,0,.08)}
 .bar{max-width:980px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
-.bar h1{font-size:16px;margin:0;flex:1;white-space:nowrap}
-.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+.bar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;font-weight:800;letter-spacing:.02em}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-ink);color:var(--accent);white-space:nowrap;font-weight:700}
 nav{max-width:980px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto}
-nav button{border:0;background:none;padding:8px 12px;border-bottom:3px solid transparent;color:var(--sub);white-space:nowrap;cursor:pointer}
-nav button.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+nav button{border:0;background:none;padding:8px 13px;border-radius:10px 10px 0 0;color:rgba(43,33,0,.7);white-space:nowrap;cursor:pointer;font-weight:600}
+nav button.on{color:var(--ink);background:var(--bg);font-weight:800}
 main{max-width:980px;margin:0 auto;padding:16px 16px 80px}
 h2{font-size:15px;margin:22px 0 8px;display:flex;align-items:center;gap:8px}
 h2 .n,.dayhead .n{font-size:12px;font-weight:400;color:var(--sub)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .muted{color:var(--sub);font-size:13px}
 .empty{color:var(--sub);font-size:13px;padding:10px 2px}
-.btn{border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:10px;cursor:pointer;white-space:nowrap;font-weight:600}
+.btn.pri{background:var(--accent);border-color:var(--accent-strong);color:var(--accent-ink);font-weight:800}
+.btn.pri:hover{background:var(--accent-strong)}
 .btn.dan{color:var(--danger)}
 .btn.sm{padding:3px 9px;font-size:13px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sp{flex:1}
 .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 11px;font-size:13px;cursor:pointer}
-.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
-.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip.on{background:var(--accent);border-color:var(--accent-strong);color:var(--accent-ink);font-weight:700}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--link);white-space:nowrap}
 .tag.gray{background:var(--bg);color:var(--sub);border:1px solid var(--line)}
 .toolbar{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center}
 /* tasks */
 .list{display:flex;flex-direction:column;gap:6px}
-.task{display:flex;align-items:flex-start;gap:10px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:9px 10px}
-.task.late{border-left-color:var(--danger)}
-.task.st-wip{border-left-color:var(--wip)}
+.task{display:flex;align-items:flex-start;gap:10px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c,var(--line));border-radius:10px;padding:9px 10px}
+.task.late{background:var(--danger-soft)}
+.task.late .t::after{content:'期限切れ';font-size:10px;font-weight:700;color:#fff;background:var(--danger);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.task.st-wip{box-shadow:inset 0 0 0 1px var(--wip)}
 .task.st-done{opacity:.55}
 .task.st-done .t{text-decoration:line-through}
 .st{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:var(--card);cursor:pointer;font-size:14px;line-height:1;display:grid;place-items:center}
@@ -62,13 +64,13 @@ h2 .n,.dayhead .n{font-size:12px;font-weight:400;color:var(--sub)}
 .meta{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin-top:2px}
 .meta .late{color:var(--danger);font-weight:600}
 .meta .noone{color:var(--warn)}
-.meta .cm{color:var(--accent);font-weight:600}
+.meta .cm{color:var(--link);font-weight:600}
 .man{flex:none;font-size:12px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;align-self:center}
 .man.none{color:var(--sub);border-style:dashed}
 .dayhead{font-size:13px;font-weight:600;margin:14px 0 4px;color:var(--sub)}
-.dayhead.today{color:var(--accent)}
+.dayhead.today{color:var(--link)}
 .dayhead.late{color:var(--danger)}
-.prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 2px}
+.prog{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 2px}
 .prog i{display:block;height:100%;background:var(--ok)}
 .ev{cursor:pointer}
 .ev .nm{font-weight:600}
@@ -84,11 +86,11 @@ h2 .n,.dayhead .n{font-size:12px;font-weight:400;color:var(--sub)}
 .cal .wd{font-size:12px;text-align:center;color:var(--sub);padding:2px 0}
 .cell{min-height:74px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px;cursor:pointer;overflow:hidden;font-size:11px}
 .cell.out{opacity:.4}
-.cell.sel{outline:2px solid var(--accent)}
+.cell.sel{outline:2px solid var(--accent-strong)}
 .cell .d{font-size:12px;font-weight:600}
-.cell.td .d{color:#fff;background:var(--accent);border-radius:99px;padding:0 6px;display:inline-block}
+.cell.td .d{color:var(--accent-ink);background:var(--accent);border-radius:99px;padding:0 6px;display:inline-block}
 .cell .evc{display:block;color:#fff;border-radius:4px;padding:0 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cell .cnt{display:inline-block;margin-top:2px;padding:0 5px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.cell .cnt{display:inline-block;margin-top:2px;padding:0 5px;border-radius:99px;background:var(--accent-soft);color:var(--link)}
 .cell .cnt.late{background:var(--danger-soft);color:var(--danger)}
 .cell .rt{display:block;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* tables */
@@ -107,10 +109,10 @@ h2 .n,.dayhead .n{font-size:12px;font-weight:400;color:var(--sub)}
 .f input,.f select,.f textarea,.inp{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);width:100%}
 .f textarea,textarea.inp{min-height:64px}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-color:var(--accent)}
+input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-color:var(--accent-strong)}
 .ck{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
 .pick{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px 10px;background:var(--bg);margin:4px 0 10px}
-.pick .cat{margin-top:10px;font-weight:600}
+.pick .pcat{margin-top:10px;font-weight:600}
 .pick .it{padding:2px 0 2px 24px;align-items:flex-start}
 .pick .it input{margin-top:4px}
 .pick .d{color:var(--sub);font-size:12px;min-width:54px;display:inline-block}
@@ -131,13 +133,13 @@ input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-co
 .stat{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .stat .card b{font-size:20px}
 .barbg{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:4px}
-.barbg i{display:block;height:100%;background:var(--accent)}
+.barbg i{display:block;height:100%;background:var(--accent-strong)}
 /* 第4版 */
 .lk{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
 .lk .man{align-self:auto}
 .side{display:flex;gap:6px;align-items:center;align-self:center;flex:none}
 .chatbtn{position:relative;font-size:13px;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--sub)}
-.chatbtn.has{color:var(--accent);border-color:var(--accent)}
+.chatbtn.has{color:var(--link);border-color:var(--accent)}
 .rdot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:#e5484d;border:2px solid var(--card)}
 .dot{display:inline-block;min-width:17px;height:17px;border-radius:99px;background:#e5484d;color:#fff;font-size:10px;line-height:17px;text-align:center;margin-left:4px;padding:0 4px;font-weight:700}
 .who.edit{cursor:pointer;text-decoration:underline dotted}
@@ -147,8 +149,18 @@ input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-co
 .chatrow .last{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatrow.unread{border-color:#e5484d}
 .seen{font-size:11px;color:var(--sub);text-align:right;margin:-2px 0 6px}
-#newver{position:fixed;top:0;left:0;right:0;z-index:40;background:var(--accent);color:#fff;padding:8px 16px;display:none;align-items:center;justify-content:center;gap:12px;font-size:14px}
-#newver button{background:#fff;color:var(--accent);border:0;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer}
+/* 第5版：カテゴリの色 */
+.cat{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--ink);border-radius:99px;padding:0 8px;font-weight:600}
+.cat i,.cdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.dayhead.cathead{display:flex;align-items:center;gap:6px;color:var(--ink);border-left:5px solid var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);border-radius:0 8px 8px 0;padding:4px 8px}
+.catprog{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.catprog .cp{font-size:12px;border-radius:8px;padding:3px 8px;background:color-mix(in srgb,var(--c) 13%,transparent);border-left:4px solid var(--c);cursor:pointer}
+.catprog .cp.done{opacity:.5}
+.colorpick{width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.evsub{font-size:12px;color:var(--sub);word-break:break-word}
+.login .card{border-top:6px solid var(--accent)}
+#newver{position:fixed;top:0;left:0;right:0;z-index:40;background:var(--accent-ink);color:var(--accent);padding:8px 16px;display:none;align-items:center;justify-content:center;gap:12px;font-size:14px}
+#newver button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;display:none;z-index:30;max-width:90vw}
 .login{max-width:360px;margin:12vh auto;padding:0 16px}
 @media (max-width:560px){.cell{min-height:56px}.cell .evc,.cell .rt{display:none}.cell .evd{display:block;width:6px;height:6px;border-radius:50%;margin-top:3px}.f2{grid-template-columns:1fr}}
@@ -169,7 +181,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='20261029-203141';   // 反映のたびに変える（新しい版のお知らせに使う）
+const APP_VERSION='20261029-204757';   // 反映のたびに変える（新しい版のお知らせに使う）
 const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads'];
 const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],staff:[]};
 const ui = {tab:'home', who:lsGet('mm_who')||'', sort:lsGet('mm_sort')||'date', eventId:null, evFilter:'', setId:null,
@@ -196,6 +208,9 @@ const bySort=(a,b)=>(a.sort||0)-(b.sort||0);
 function catList(){return [...S.categories].sort(bySort).map(c=>c.name)}
 function catIndex(n){const i=catList().indexOf(n);return i<0?999:i}
 const byDue=(a,b)=>a.due<b.due?-1:a.due>b.due?1:(catIndex(a.category)-catIndex(b.category))||bySort(a,b);
+const CAT_COLORS=['#3B82F6','#E8590C','#1D9E75','#8B5CF6','#EC4899','#14B8A6','#E24B4A','#84CC16','#0EA5E9','#A855F7','#F97316','#64748B'];
+function catColor(n){const l=[...S.categories].sort(bySort);const i=l.findIndex(c=>c.name===n);if(i<0)return '#9ca3af';return l[i].color||CAT_COLORS[i%CAT_COLORS.length]}
+const catChip=n=>n?`<span class="cat" style="--c:${catColor(n)}"><i></i>${esc(n)}</span>`:'';
 const sets=()=>[...S.template_sets].sort(bySort);
 const setById=id=>S.template_sets.find(s=>s.id===id);
 const evById=id=>S.events.find(e=>e.id===id);
@@ -441,19 +456,19 @@ function taskRow(t,{showEvent=true}={}){
   const nc=commentsOf(t.id).length, ur=unreadOf(t.id);
   const lks=[...(t.manual_url?[{name:'マニュアル',url:t.manual_url}]:[]),...linksOf(t)];
   const lk=lks.length||t.manual_name?`<div class="lk">${lks.map(l=>`<a class="man" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}を見る</a>`).join('')}${!t.manual_url&&t.manual_name?'<span class="man none" title="リンク未設定">マニュアル未設定</span>':''}</div>`:'';
-  return `<div class="task st-${t.status} ${late?'late':''}">
+  return `<div class="task st-${t.status} ${late?'late':''}" style="--c:${catColor(t.category)}">
     <button class="st" data-act="cycle" data-id="${t.id}" title="${STATUS[t.status][1]}（押すと切り替え）">${STATUS[t.status][0]}</button>
     <div class="body" data-act="editTask" data-id="${t.id}">
       <div class="t">${esc(t.title)}</div>
       <div class="meta">
         <span class="${late?'late':''}">${md(t.due)}・${rel(t.due)}</span>
         ${showEvent?(ev?`<span style="color:${evColor(ev.id)}">● ${esc(evName(ev))}</span>`:'<span>単発タスク</span>'):''}
-        ${ui.sort!=='cat'&&t.category?`<span>${esc(t.category)}</span>`:''}
+        ${ui.sort!=='cat'&&t.category?catChip(t.category):''}
         ${t.assignee?`<span>担当：${esc(memName(t.assignee))}</span>`:`<span class="noone">担当未定</span>`}
         ${t.effort?`<span>工数${Number(t.effort)}</span>`:''}
         ${t.status==='wip'?`<span class="who edit" style="color:var(--wip)" data-act="editWho" data-id="${t.id}" title="押すと人を変えられます">作業中：${esc(t.wip_by||'（不明）')}</span>`:''}
-        ${t.status==='done'?`<span class="who edit" data-act="editWho" data-id="${t.id}" title="押すと人を変えられます">✓ ${esc(t.done_by||'（不明）')}${t.done_at?'（'+fmtTime(t.done_at)+'）':''}</span>`:''}
-        ${t.status==='skip'?`<span class="edit who" style="color:var(--sub)" data-act="editWho" data-id="${t.id}">不要（${esc(t.done_by||'不明')}）</span>`:''}
+        ${t.status==='done'?`<span class="who edit" data-act="editWho" data-id="${t.id}" title="押すと人を変えられます">✓ ${esc(t.done_by||'完了')}${t.done_at?'（'+fmtTime(t.done_at)+'）':''}</span>`:''}
+        ${t.status==='skip'?`<span class="edit who" style="color:var(--sub)" data-act="editWho" data-id="${t.id}">不要${t.done_by?'（'+esc(t.done_by)+'）':''}</span>`:''}
         ${t.memo?`<span>📝 ${esc(t.memo.slice(0,30))}</span>`:''}
       </div>
       ${lk}
@@ -466,7 +481,7 @@ function grouped(ts,{ev=null,showEvent=true,headless=false}={}){
   if(ui.sort==='cat'){
     const cats=[...new Set(ts.map(x=>x.category||'（カテゴリなし）'))].sort((a,b)=>catIndex(a)-catIndex(b));
     return cats.map(c=>{const items=ts.filter(x=>(x.category||'（カテゴリなし）')===c);const d=items.filter(x=>!isOpen(x)).length;
-      return `<div class="dayhead">${esc(c)}　<span class="n">${ev?`完了 ${d}/${items.length}`:`${items.length}件`}</span></div>
+      return `<div class="dayhead cathead" style="--c:${catColor(c)}">${esc(c)}　<span class="n">${ev?`完了 ${d}/${items.length}`:`${items.length}件`}</span></div>
         <div class="list">${items.map(x=>taskRow(x,{showEvent})).join('')}</div>`}).join('');
   }
   if(headless) return `<div class="list">${ts.map(x=>taskRow(x,{showEvent})).join('')}</div>`;
@@ -515,7 +530,8 @@ function evLabels(ev){
 function evCard(ev){
   const s=evStats(ev), n=diffDays(ev.date,today());
   return `<div class="card ev" data-act="openEvent" data-id="${ev.id}" style="border-left:4px solid ${evColor(ev.id)}">
-    <div class="row"><span class="nm">${esc(ev.name)}</span>${ev.short?`<span class="tag gray">略：${esc(ev.short)}</span>`:''}<span class="sp"></span><span class="muted">${md(ev.date)}</span></div>
+    <div class="row"><span class="nm">${esc(evName(ev))}</span><span class="sp"></span><span class="muted">${md(ev.date)}</span></div>
+    ${ev.short?`<div class="evsub">${esc(ev.name)}</div>`:''}
     <div class="row" style="gap:4px;margin-top:2px">${evLabels(ev)}</div>
     <div class="muted">${n>0?`大会まであと${n}日`:n===0?'今日が大会日':'終了'}</div>
     <div class="prog"><i style="width:${s.total?Math.round(s.closed/s.total*100):0}%"></i></div>
@@ -593,13 +609,16 @@ function viewEvent(){
   const ts=S.tasks.filter(x=>x.event_id===ev.id);
   return `<div class="row"><button class="btn sm" data-act="back">← 大会一覧</button></div>
     <div class="card" style="margin-top:10px;border-left:4px solid ${evColor(ev.id)}">
-      <div class="row"><h2 style="margin:0">${esc(ev.name)}</h2><span class="sp"></span>
+      <div class="row"><h2 style="margin:0">${esc(evName(ev))}</h2><span class="sp"></span>
         <button class="btn sm" data-act="editEvent" data-id="${ev.id}">大会情報を編集</button></div>
+      ${ev.short?`<div class="evsub">${esc(ev.name)}</div>`:''}
       <div class="muted">${md(ev.date)}・${rel(ev.date)}</div>
       <div class="row" style="gap:4px;margin-top:4px">${evLabels(ev)}</div>
       <div class="prog"><i style="width:${s.total?Math.round(s.closed/s.total*100):0}%"></i></div>
       <div class="meta"><span>完了 ${s.closed}/${s.total}${s.skip?`（うち不要${s.skip}）`:''}</span>${s.remain?`<span>残り工数 ${fmtMin(s.remain)}</span>`:''}${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
       ${ev.memo?`<div class="muted" style="margin-top:6px">📝 ${esc(ev.memo)}</div>`:''}
+      <div class="catprog">${[...new Set(ts.map(x=>x.category))].sort((a,b)=>catIndex(a)-catIndex(b)).map(c=>{const it=ts.filter(x=>x.category===c),dn=it.filter(x=>!isOpen(x)).length;
+        return `<span class="cp ${dn===it.length?'done':''}" style="--c:${catColor(c)}" data-act="sort" data-id="cat">${esc(c)} ${dn}/${it.length}</span>`}).join('')}</div>
     </div>
     <div class="row" style="margin-top:12px">${sortChips()}<span class="sp"></span><button class="btn sm" data-act="newTask" data-id="${ev.id}">＋ タスクを追加</button></div>
     ${ts.length?grouped(ts,{ev,showEvent:false}):'<div class="empty">タスクがありません</div>'}`;
@@ -637,7 +656,7 @@ function viewCalendar(){
       <button class="btn sm" data-act="calMove" data-id="0">今月</button></div>
     <div class="cal">${WD.map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
     <h2>${md(sd)} の予定</h2>
-    ${dEvs.map(e=>`<div class="card ev" data-act="openEvent" data-id="${e.id}" style="border-left:4px solid ${evColor(e.id)};margin-bottom:6px"><span class="nm">🏆 ${esc(e.name)}</span>（大会日）</div>`).join('')}
+    ${dEvs.map(e=>`<div class="card ev" data-act="openEvent" data-id="${e.id}" style="border-left:4px solid ${evColor(e.id)};margin-bottom:6px"><span class="nm">🏆 ${esc(evName(e))}</span>（大会日）</div>`).join('')}
     ${section(dTs,'この日が期限のタスクはありません',{headless:true})}
     ${dRts.length?`<div class="dayhead">ルーティン</div><div class="list">${dRts.map(r=>routineRow(r,sd)).join('')}</div>`:''}`;
 }
@@ -660,16 +679,16 @@ function viewTemplates(){
   const st=setById(ui.setId);
   const ts=S.templates.filter(t=>t.set_id===ui.setId).sort((a,b)=>a.days-b.days||catIndex(a.category)-catIndex(b.category)||bySort(a,b));
   const usedBy=S.events.filter(e=>e.set_id===ui.setId).length;
-  const row=t=>`<tr class="click" data-act="editTemplate" data-id="${t.id}">
+  const row=t=>`<tr class="click" data-act="editTemplate" data-id="${t.id}" style="box-shadow:inset 4px 0 0 ${catColor(t.category)}">
       <td style="white-space:nowrap">${daysLabel(t.days)}</td><td>${esc(t.title)}${t.memo?`<div class="muted">${esc(t.memo)}</div>`:''}${linksOf(t).length?`<div class="muted">🔗 ${linksOf(t).map(l=>esc(l.name)).join('・')}</div>`:''}</td>
       <td><input class="mini" type="number" min="0" step="5" value="${Number(t.effort||0)}" data-inline="effort" data-id="${t.id}" title="ここで直接書き換えられます"></td>
-      <td>${ui.sort==='date'?`<div class="muted">${esc(t.category)}</div>`:''}${t.manual_name||t.manual_url?`<div class="muted">${t.manual_url?'🔗':'⚠️ リンク未設定'} ${esc(t.manual_name)}</div>`:''}</td></tr>`;
+      <td>${ui.sort==='date'?catChip(t.category):''}${t.manual_name||t.manual_url?`<div class="muted">${t.manual_url?'🔗':'⚠️ リンク未設定'} ${esc(t.manual_name)}</div>`:''}</td></tr>`;
   const head='<tr><th style="width:80px">いつ</th><th>タスク</th><th style="width:90px">工数</th><th style="width:28%">カテゴリ・マニュアル</th></tr>';
   const sumE=a=>a.reduce((x,t)=>x+Number(t.effort||0),0);
   let body;
   if(ui.sort==='cat'){
     const cats=[...new Set(ts.map(t=>t.category))].sort((a,b)=>catIndex(a)-catIndex(b));
-    body=cats.map(c=>`<h2>${esc(c)} <span class="n">${ts.filter(t=>t.category===c).length}件・工数${sumE(ts.filter(t=>t.category===c))}</span></h2><table class="tbl">${head}${ts.filter(t=>t.category===c).map(row).join('')}</table>`).join('');
+    body=cats.map(c=>`<h2><span class="cdot" style="--c:${catColor(c)}"></span>${esc(c)} <span class="n">${ts.filter(t=>t.category===c).length}件・工数${sumE(ts.filter(t=>t.category===c))}</span></h2><table class="tbl">${head}${ts.filter(t=>t.category===c).map(row).join('')}</table>`).join('');
   }else body=`<table class="tbl" style="margin-top:10px">${head}${ts.map(row).join('')}</table>`;
   return `<div class="note">テンプレを変えると、<b>これから登録する大会</b>に反映されます。すでに登録した大会のタスクは変わりません（大会ごとに直接直せます）。</div>
     <h2>テンプレ一式</h2>
@@ -682,9 +701,9 @@ function viewTemplates(){
     ${ts.length?body:'<div class="empty">まだタスクがありません</div>'}`:''}
     <h2>カテゴリの管理</h2>
     <div class="card">
-      <div class="muted" style="margin-bottom:8px">並び順は「カテゴリ別」で表示するときの順番になります。名前を変えると、テンプレと登録済みのタスクのカテゴリ名もまとめて変わります。</div>
+      <div class="muted" style="margin-bottom:8px">左の色を押すと、カテゴリの色を変えられます。並び順は「カテゴリ別」で表示するときの順番になります。名前を変えると、テンプレと登録済みのタスクのカテゴリ名もまとめて変わります。</div>
       <div class="list" style="gap:4px">${[...S.categories].sort(bySort).map((c,i,a)=>{const n=S.templates.filter(t=>t.category===c.name).length+S.tasks.filter(t=>t.category===c.name).length;
-        return `<div class="row"><span style="flex:1">${esc(c.name)} <span class="muted">（${n}件で使用）</span></span>
+        return `<div class="row"><input type="color" class="colorpick" value="${catColor(c.name)}" data-catcolor="${c.id}" title="押すと色を変えられます"><span style="flex:1">${esc(c.name)} <span class="muted">（${n}件で使用）</span></span>
           <button class="btn sm" data-act="catMove" data-id="${c.id}" data-dir="-1" ${i===0?'disabled':''}>↑</button>
           <button class="btn sm" data-act="catMove" data-id="${c.id}" data-dir="1" ${i===a.length-1?'disabled':''}>↓</button>
           <button class="btn sm" data-act="catRename" data-id="${c.id}">名前変更</button>
@@ -796,7 +815,7 @@ function openChat(tid){
   closeModal();
   const ov=document.createElement('div'); ov.className='ov';
   ov.innerHTML=`<div class="modal"><div class="row"><h3 style="margin:0;flex:1">💬 ${esc(t.title)}</h3><button type="button" class="btn sm" data-act="closeModal">閉じる</button></div>
-    <div class="muted" style="margin:2px 0 10px">${ev?esc(ev.name)+'・':''}期限 ${md(t.due)}　<a href="#" data-act="editTask" data-id="${t.id}">タスクの詳細を開く</a></div>
+    <div class="muted" style="margin:2px 0 10px">${ev?esc(evName(ev))+'・':''}期限 ${md(t.due)}　<a href="#" data-act="editTask" data-id="${t.id}">タスクの詳細を開く</a></div>
     <div id="thread" data-task="${t.id}">${threadHtml(t.id)}</div></div>`;
   ov.addEventListener('mousedown',e=>{if(e.target===ov) closeModal()});
   document.body.appendChild(ov);
@@ -824,7 +843,7 @@ function editWho(tid){
   });
 }
 function taskForm(t){
-  const evOpts=`<option value="">（大会に関係ない単発タスク）</option>${[...S.events].sort((a,b)=>a.date<b.date?-1:1).map(e=>`<option value="${e.id}" ${e.id===t.event_id?'selected':''}>${esc(e.name)}（${md(e.date)}）</option>`).join('')}`;
+  const evOpts=`<option value="">（大会に関係ない単発タスク）</option>${[...S.events].sort((a,b)=>a.date<b.date?-1:1).map(e=>`<option value="${e.id}" ${e.id===t.event_id?'selected':''}>${esc(evName(e))}（${md(e.date)}）</option>`).join('')}`;
   return `<div class="f"><label>タスク</label><input name="title" value="${esc(t.title)}" required></div>
     <div class="f2"><div class="f"><label>期限</label><input name="due" type="date" value="${esc(t.due)}" required></div>
       <div class="f"><label>状況</label><select name="status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===t.status?'selected':''}>${v[1]}</option>`).join('')}</select></div></div>
@@ -862,7 +881,7 @@ function pickHtml(setId,date){
   if(!ts.length) return '<div class="empty">このテンプレにはタスクがありません</div>';
   const cats=[...new Set(ts.map(t=>t.category))].sort((a,b)=>catIndex(a)-catIndex(b));
   return cats.map(c=>{const items=ts.filter(t=>t.category===c).sort((a,b)=>a.days-b.days||bySort(a,b));
-    return `<label class="ck cat"><input type="checkbox" data-cattoggle="${esc(c)}" checked> ${esc(c)} <span class="muted">（${items.length}件）</span></label>
+    return `<label class="ck pcat"><input type="checkbox" data-cattoggle="${esc(c)}" checked> <span class="cdot" style="--c:${catColor(c)}"></span>${esc(c)} <span class="muted">（${items.length}件）</span></label>
       ${items.map(t=>`<label class="ck it"><input type="checkbox" name="tpl" value="${t.id}" data-cat="${esc(c)}" checked>
         <span><span class="d">${daysLabel(t.days)}</span>${esc(t.title)}${date?` <span class="muted">→ ${md(addDays(date,t.days))}</span>`:''}</span></label>`).join('')}`}).join('');
 }
@@ -1073,6 +1092,9 @@ document.addEventListener('click',e=>{
   e.preventDefault(); const f=ACT[el.dataset.act]; if(f) f(el.dataset,el,e);
 });
 const ARRAY_FIELDS=['tpl','link_name','link_url'];
+/* カテゴリの色を変える */
+document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.catcolor)return;
+  const c=S.categories.find(x=>x.id===el.dataset.catcolor);if(c){put('categories',{...c,color:el.value});toast(`「${c.name}」の色を変えました`)}});
 /* テンプレ一覧で工数をその場で書き換える */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||el.dataset.inline!=='effort')return;
   const t=S.templates.find(x=>x.id===el.dataset.id);if(!t)return;const v=Math.max(0,parseInt(el.value||'0',10)||0);
