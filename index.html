@@ -115,6 +115,23 @@ input[type=checkbox]{width:auto!important;padding:0;margin:0;flex:none;accent-co
 .pick .it input{margin-top:4px}
 .pick .d{color:var(--sub);font-size:12px;min-width:54px;display:inline-block}
 .foot{display:flex;gap:8px;margin-top:14px}
+/* 第3版 */
+.task.st-skip{opacity:.5}
+.task.st-skip .t{text-decoration:line-through}
+.st-skip .st{border-color:var(--sub);color:var(--sub)}
+.skipbtn{flex:none;font-size:12px;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--sub);align-self:center}
+.skipbtn:hover{color:var(--danger);border-color:var(--danger)}
+.meta .who{color:var(--ok);font-weight:600}
+.cell .ct{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-size:11px;line-height:1.35}
+.cell .ct.late{color:var(--danger)}
+.cell .ct i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px;vertical-align:1px}
+.cell .more{display:block;color:var(--sub)}
+@media (min-width:561px){.cell{min-height:104px}.cell .cnt{display:none}}
+@media (max-width:560px){.cell .ct,.cell .more{display:none}}
+.stat{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.stat .card b{font-size:20px}
+.barbg{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:4px}
+.barbg i{display:block;height:100%;background:var(--accent)}
 #newver{position:fixed;top:0;left:0;right:0;z-index:40;background:var(--accent);color:#fff;padding:8px 16px;display:none;align-items:center;justify-content:center;gap:12px;font-size:14px}
 #newver button{background:#fff;color:var(--accent);border:0;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;display:none;z-index:30;max-width:90vw}
@@ -137,7 +154,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='2026-10-29c';   // 反映のたびに変える（新しい版のお知らせに使う）
+const APP_VERSION='20261029-200524';   // 反映のたびに変える（新しい版のお知らせに使う）
 const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments'];
 const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],staff:[]};
 const ui = {tab:'home', who:lsGet('mm_who')||'', sort:lsGet('mm_sort')||'date', eventId:null, evFilter:'', setId:null,
@@ -354,7 +371,7 @@ async function del(t,ids){
 function tasksFromTemplates(ev,tpls){
   return tpls.map(t=>({
     id:uid(),event_id:ev.id,template_id:t.id,category:t.category,title:t.title,
-    due:addDays(ev.date,t.days),days:t.days,status:'todo',assignee:null,
+    due:addDays(ev.date,t.days),days:t.days,status:'todo',effort:Number(t.effort||0),assignee:null,
     manual_name:t.manual_name||'',manual_url:t.manual_url||'',memo:t.memo||'',sort:t.sort
   }));
 }
@@ -368,12 +385,23 @@ function routineOn(r,day){
 function routineRule(r){return r.kind==='daily'?'毎日':r.kind==='weekly'?`毎週${WD[r.dow]}曜日`:`毎月${r.dom}日`}
 function routineDone(r,day){return S.routine_checks.some(c=>c.routine_id===r.id&&c.date===day)}
 const mine=t=>!ui.who||t.assignee===ui.who;
-const STATUS={todo:['','未着手'],wip:['◐','作業中'],done:['✓','完了']};
+const STATUS={todo:['','未着手'],wip:['◐','作業中'],done:['✓','完了'],skip:['−','不要']};
+const isOpen=t=>t.status==='todo'||t.status==='wip';
+const doneDay=t=>t.done_at?ymd(new Date(t.done_at)):null;
+/* 状況を変えるときに「誰が・いつ」を記録する */
+function withStatus(t,st){
+  const o={...t,status:st}, now=new Date().toISOString(), me=myName();
+  if(st==='todo'){o.wip_by=null;o.wip_at=null;o.done_by=null;o.done_at=null}
+  if(st==='wip'){o.wip_by=me;o.wip_at=now;o.done_by=null;o.done_at=null}
+  if(st==='done'||st==='skip'){o.done_by=me;o.done_at=now}
+  return o;
+}
+const fmtMin=m=>m>=60?`${Math.floor(m/60)}時間${m%60?m%60+'分':''}`:`${m}分`;
 const commentsOf=id=>S.comments.filter(c=>c.task_id===id);
 
 /* ---------- 部品 ---------- */
 function taskRow(t,{showEvent=true}={}){
-  const late=t.status!=='done'&&t.due<today();
+  const late=isOpen(t)&&t.due<today();
   const ev=t.event_id?evById(t.event_id):null;
   const nc=commentsOf(t.id).length;
   const man=t.manual_url?`<a class="man" href="${esc(t.manual_url)}" target="_blank" rel="noopener">マニュアル</a>`
@@ -387,18 +415,21 @@ function taskRow(t,{showEvent=true}={}){
         ${showEvent?(ev?`<span style="color:${evColor(ev.id)}">● ${esc(ev.name)}</span>`:'<span>単発タスク</span>'):''}
         ${ui.sort!=='cat'&&t.category?`<span>${esc(t.category)}</span>`:''}
         ${t.assignee?`<span>担当：${esc(memName(t.assignee))}</span>`:`<span class="noone">担当未定</span>`}
-        ${t.status==='wip'?'<span style="color:var(--wip)">作業中</span>':''}
+        ${t.effort?`<span>⏱ ${fmtMin(Number(t.effort))}</span>`:''}
+        ${t.status==='wip'?`<span style="color:var(--wip);font-weight:600">作業中${t.wip_by?'：'+esc(t.wip_by):''}</span>`:''}
+        ${t.status==='done'&&t.done_by?`<span class="who">✓ ${esc(t.done_by)}${t.done_at?'（'+fmtTime(t.done_at)+'）':''}</span>`:''}
+        ${t.status==='skip'?`<span>不要${t.done_by?'（'+esc(t.done_by)+'）':''}</span>`:''}
         ${nc?`<span class="cm">💬 ${nc}</span>`:''}
         ${t.memo?`<span>📝 ${esc(t.memo.slice(0,30))}</span>`:''}
       </div>
-    </div>${man}</div>`;
+    </div>${isOpen(t)?`<button class="skipbtn" data-act="skip" data-id="${t.id}" title="この大会では不要">不要</button>`:''}${man}</div>`;
 }
 /* タスクを「日付ごと」または「カテゴリごと」に見出しをつけて並べる */
 function grouped(ts,{ev=null,showEvent=true,headless=false}={}){
   ts=[...ts].sort(byDue);
   if(ui.sort==='cat'){
     const cats=[...new Set(ts.map(x=>x.category||'（カテゴリなし）'))].sort((a,b)=>catIndex(a)-catIndex(b));
-    return cats.map(c=>{const items=ts.filter(x=>(x.category||'（カテゴリなし）')===c);const d=items.filter(x=>x.status==='done').length;
+    return cats.map(c=>{const items=ts.filter(x=>(x.category||'（カテゴリなし）')===c);const d=items.filter(x=>!isOpen(x)).length;
       return `<div class="dayhead">${esc(c)}　<span class="n">${ev?`完了 ${d}/${items.length}`:`${items.length}件`}</span></div>
         <div class="list">${items.map(x=>taskRow(x,{showEvent})).join('')}</div>`}).join('');
   }
@@ -406,7 +437,7 @@ function grouped(ts,{ev=null,showEvent=true,headless=false}={}){
   const t=today();
   return [...new Set(ts.map(x=>x.due))].map(d=>{
     const items=ts.filter(x=>x.due===d);
-    const cls=d===t?'today':(d<t&&items.some(x=>x.status!=='done')?'late':'');
+    const cls=d===t?'today':(d<t&&items.some(x=>isOpen(x))?'late':'');
     return `<div class="dayhead ${cls}">${md(d)}${ev?'　'+daysLabel(diffDays(d,ev.date)):''}　<span class="n">${rel(d)}・${items.length}件</span></div>
       <div class="list">${items.map(x=>taskRow(x,{showEvent})).join('')}</div>`;
   }).join('');
@@ -434,10 +465,11 @@ function sortChips(){
 const toolbar=(who=true)=>`<div class="toolbar">${sortChips()}${who?whoChips():''}</div>`;
 function evStats(ev){
   const ts=S.tasks.filter(t=>t.event_id===ev.id);
-  const done=ts.filter(t=>t.status==='done').length;
-  const late=ts.filter(t=>t.status!=='done'&&t.due<today()).length;
-  const noone=ts.filter(t=>t.status!=='done'&&!t.assignee).length;
-  return {total:ts.length,done,late,noone};
+  const done=ts.filter(t=>t.status==='done').length, skip=ts.filter(t=>t.status==='skip').length;
+  const remain=ts.filter(isOpen).reduce((a,t)=>a+Number(t.effort||0),0);
+  const late=ts.filter(t=>isOpen(t)&&t.due<today()).length;
+  const noone=ts.filter(t=>isOpen(t)&&!t.assignee).length;
+  return {total:ts.length,done,skip,closed:done+skip,late,noone,remain};
 }
 function evLabels(ev){
   const st=setById(ev.set_id);
@@ -450,14 +482,14 @@ function evCard(ev){
     <div class="row"><span class="nm">${esc(ev.name)}</span><span class="sp"></span><span class="muted">${md(ev.date)}</span></div>
     <div class="row" style="gap:4px;margin-top:2px">${evLabels(ev)}</div>
     <div class="muted">${n>0?`大会まであと${n}日`:n===0?'今日が大会日':'終了'}</div>
-    <div class="prog"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
-    <div class="meta"><span>完了 ${s.done}/${s.total}</span>${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone&&n>=0?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
+    <div class="prog"><i style="width:${s.total?Math.round(s.closed/s.total*100):0}%"></i></div>
+    <div class="meta"><span>完了 ${s.closed}/${s.total}${s.skip?`（うち不要${s.skip}）`:''}</span>${s.remain?`<span>残り工数 ${fmtMin(s.remain)}</span>`:''}${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone&&n>=0?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
   </div>`;
 }
 
 /* ---------- 画面 ---------- */
 function viewHome(){
-  const t=today(), open=S.tasks.filter(x=>x.status!=='done'&&mine(x));
+  const t=today(), open=S.tasks.filter(x=>isOpen(x)&&mine(x));
   const late=open.filter(x=>x.due<t);
   const now=open.filter(x=>x.due===t);
   const week=open.filter(x=>x.due>t&&x.due<=addDays(t,7));
@@ -469,12 +501,43 @@ function viewHome(){
     <h2>期限切れ <span class="n">${late.length}件</span></h2>${section(late,'期限切れはありません 🎉',{headless:true})}
     <h2>今日まで <span class="n">${md(t)}・${now.length}件</span></h2>${section(now,'今日が期限のタスクはありません',{headless:true})}
     <h2>今日のルーティン</h2>${listOr(rts,r=>routineRow(r,t),'今日のルーティンはありません')}
+    ${todayDone()}
     <h2>これから7日間 <span class="n">${week.length}件</span></h2>${section(week,'この1週間に期限のタスクはありません')}
     ${recent.length?`<h2>最近のやり取り <span class="n">7日以内</span></h2><div class="list">${recent.map(c=>{const tk=S.tasks.find(x=>x.id===c.task_id);if(!tk)return'';const ev=tk.event_id&&evById(tk.event_id);
       return `<div class="card feed" data-act="editTask" data-id="${tk.id}"><div class="muted">${esc(tk.title)}${ev?`（${esc(ev.name)}）`:''}・${fmtTime(c.created_at)}</div><div><b>${esc(c.author_name||c.author_email)}</b>：${esc(c.body.slice(0,80))}</div></div>`}).join('')}</div>`:''}
     <h2>近くの大会</h2>${upcoming.length?`<div class="grid">${upcoming.map(evCard).join('')}</div>`:'<div class="empty">登録された大会はありません</div>'}`;
 }
 
+function todayDone(){
+  const t=today(), ds=S.tasks.filter(x=>!isOpen(x)&&doneDay(x)===t).sort((a,b)=>a.done_at<b.done_at?1:-1);
+  const rc=S.routine_checks.filter(c=>c.date===t).length;
+  if(!ds.length) return `<h2>今日やったこと</h2><div class="empty">まだありません${rc?`（ルーティン ${rc}件はチェック済み）`:''}</div>`;
+  const by={}; ds.filter(x=>x.status==='done').forEach(x=>{const k=x.done_by||'（不明）';by[k]=(by[k]||0)+Number(x.effort||0)});
+  return `<h2>今日やったこと <span class="n">${ds.length}件</span></h2>
+    <div class="chips" style="margin-bottom:6px">${Object.entries(by).map(([k,m])=>`<span class="tag gray">${esc(k)}：${fmtMin(m)}</span>`).join('')}</div>
+    <div class="list">${ds.map(x=>taskRow(x)).join('')}</div>`;
+}
+function viewReport(){
+  const p=ui.period||'week', t=today();
+  const from={today:t,week:addDays(t,-6),month:t.slice(0,8)+'01',all:'0000-00-00'}[p];
+  const ds=S.tasks.filter(x=>x.status==='done'&&doneDay(x)&&doneDay(x)>=from);
+  const by={}; ds.forEach(x=>{const k=x.done_by||'（不明）';(by[k]=by[k]||{n:0,m:0});by[k].n++;by[k].m+=Number(x.effort||0)});
+  const rows=Object.entries(by).sort((a,b)=>b[1].m-a[1].m||b[1].n-a[1].n);
+  const max=Math.max(1,...rows.map(r=>r[1].m));
+  const total=ds.reduce((a,x)=>a+Number(x.effort||0),0);
+  const days=[...new Set(ds.map(doneDay))].sort().reverse();
+  const P=[['today','今日'],['week','この7日間'],['month','今月'],['all','すべて']];
+  return `<div class="chips"><span class="muted">期間：</span>${P.map(([k,l])=>`<button class="chip ${p===k?'on':''}" data-act="period" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="stat" style="margin-top:12px"><div class="card"><div class="muted">完了したタスク</div><b>${ds.length}件</b></div>
+      <div class="card"><div class="muted">工数の合計</div><b>${fmtMin(total)}</b></div></div>
+    <h2>人ごとの実績</h2>
+    ${rows.length?`<table class="tbl"><tr><th>人</th><th style="width:70px">件数</th><th>工数</th></tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}件</td>
+      <td>${fmtMin(v.m)}<div class="barbg"><i style="width:${Math.round(v.m/max*100)}%"></i></div></td></tr>`).join('')}</table>`:'<div class="empty">この期間に完了したタスクはありません</div>'}
+    <div class="muted" style="margin-top:6px">※「完了」を押した人の実績として数えます。工数が0のタスクは件数だけに入ります。</div>
+    <h2>完了したタスク</h2>
+    ${days.map(d=>`<div class="dayhead">${md(d)}　<span class="n">${ds.filter(x=>doneDay(x)===d).length}件</span></div>
+      <div class="list">${ds.filter(x=>doneDay(x)===d).sort((a,b)=>a.done_at<b.done_at?1:-1).map(x=>taskRow(x)).join('')}</div>`).join('')||''}`;
+}
 function viewEvents(){
   const t=today(), f=ui.evFilter;
   const pass=e=>!f||e.set_id===f;
@@ -498,8 +561,8 @@ function viewEvent(){
         <button class="btn sm" data-act="editEvent" data-id="${ev.id}">大会情報を編集</button></div>
       <div class="muted">${md(ev.date)}・${rel(ev.date)}</div>
       <div class="row" style="gap:4px;margin-top:4px">${evLabels(ev)}</div>
-      <div class="prog"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
-      <div class="meta"><span>完了 ${s.done}/${s.total}</span>${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
+      <div class="prog"><i style="width:${s.total?Math.round(s.closed/s.total*100):0}%"></i></div>
+      <div class="meta"><span>完了 ${s.closed}/${s.total}${s.skip?`（うち不要${s.skip}）`:''}</span>${s.remain?`<span>残り工数 ${fmtMin(s.remain)}</span>`:''}${s.late?`<span class="late">期限切れ ${s.late}件</span>`:''}${s.noone?`<span class="noone">担当未定 ${s.noone}件</span>`:''}</div>
       ${ev.memo?`<div class="muted" style="margin-top:6px">📝 ${esc(ev.memo)}</div>`:''}
     </div>
     <div class="row" style="margin-top:12px">${sortChips()}<span class="sp"></span><button class="btn sm" data-act="newTask" data-id="${ev.id}">＋ タスクを追加</button></div>
@@ -517,12 +580,14 @@ function viewCalendar(){
     const d=new Date(start); d.setDate(start.getDate()+i); const ds=ymd(d);
     if(i===35&&d.getMonth()!==m-1) break;
     const evs=S.events.filter(e=>e.date===ds);
-    const ts=S.tasks.filter(x=>x.due===ds&&x.status!=='done'&&mine(x));
+    const ts=S.tasks.filter(x=>x.due===ds&&isOpen(x)&&mine(x));
     const rts=S.routines.filter(r=>r.kind!=='daily'&&routineOn(r,ds));
     cells+=`<div class="cell ${d.getMonth()!==m-1?'out':''} ${ds===t?'td':''} ${ds===ui.calDay?'sel':''}" data-act="calDay" data-id="${ds}">
       <span class="d">${d.getDate()}</span>
       ${evs.map(e=>`<span class="evc" style="background:${evColor(e.id)}">${esc(e.name)}</span><span class="evd" style="background:${evColor(e.id)}"></span>`).join('')}
       ${ts.length?`<span class="cnt ${ds<t?'late':''}">${ts.length}件</span>`:''}
+      ${ts.sort(byDue).slice(0,4).map(x=>`<span class="ct ${ds<t?'late':''}" title="${esc(x.title)}"><i style="background:${x.event_id?evColor(x.event_id):'var(--sub)'}"></i>${esc(x.title)}</span>`).join('')}
+      ${ts.length>4?`<span class="more">ほか${ts.length-4}件</span>`:''}
       ${rts.map(r=>`<span class="rt">・${esc(r.title)}</span>`).join('')}
     </div>`;
   }
@@ -543,7 +608,7 @@ function viewCalendar(){
 
 function viewRoutines(){
   const single=S.tasks.filter(t=>!t.event_id);
-  const openS=single.filter(t=>t.status!=='done'), doneS=single.filter(t=>t.status==='done');
+  const openS=single.filter(t=>isOpen(t)), doneS=single.filter(t=>!isOpen(t));
   return `<h2>くり返しのタスク（ルーティン）<span class="sp"></span><button class="btn sm" data-act="newRoutine">＋ 追加</button></h2>
     <div class="muted" style="margin-bottom:6px">チェックはその日ごとに付けられます（ホームの「今日のルーティン」から）。</div>
     ${listOr([...S.routines].sort(bySort),r=>routineRow(r,today()),'ありません')}
@@ -560,7 +625,7 @@ function viewTemplates(){
   const ts=S.templates.filter(t=>t.set_id===ui.setId).sort((a,b)=>a.days-b.days||catIndex(a.category)-catIndex(b.category)||bySort(a,b));
   const usedBy=S.events.filter(e=>e.set_id===ui.setId).length;
   const row=t=>`<tr class="click" data-act="editTemplate" data-id="${t.id}">
-      <td style="white-space:nowrap">${daysLabel(t.days)}</td><td>${esc(t.title)}${t.memo?`<div class="muted">${esc(t.memo)}</div>`:''}</td>
+      <td style="white-space:nowrap">${daysLabel(t.days)}</td><td>${esc(t.title)}${t.effort?` <span class="muted">⏱ ${fmtMin(Number(t.effort))}</span>`:''}${t.memo?`<div class="muted">${esc(t.memo)}</div>`:''}</td>
       <td>${ui.sort==='date'?`<div class="muted">${esc(t.category)}</div>`:''}${t.manual_name||t.manual_url?`<div class="muted">${t.manual_url?'🔗':'⚠️ リンク未設定'} ${esc(t.manual_name)}</div>`:''}</td></tr>`;
   const head='<tr><th style="width:80px">いつ</th><th>タスク</th><th style="width:30%">カテゴリ・マニュアル</th></tr>';
   let body;
@@ -609,7 +674,7 @@ function viewStaff(){
       <div class="muted" style="margin-bottom:8px">ここにあるメールアドレスの人だけが、アプリに入れます。追加された人は、ログイン画面の「はじめての方」から自分でパスワードを決めます。</div>
       <table class="tbl"><tr><th>名前</th><th>メールアドレス</th><th>権限</th>${ui.isAdmin?'<th></th>':''}</tr>
       ${S.staff.map(x=>`<tr><td>${esc(x.name)}</td><td style="word-break:break-all">${esc(x.email)}</td><td>${x.is_admin?'管理者':'スタッフ'}</td>
-        ${ui.isAdmin?`<td style="white-space:nowrap">${x.email===me?'<span class="muted">自分</span>':`<button class="btn sm" data-act="toggleAdmin" data-id="${esc(x.email)}">${x.is_admin?'スタッフにする':'管理者にする'}</button> <button class="btn sm dan" data-act="delStaff" data-id="${esc(x.email)}">外す</button>`}</td>`:''}</tr>`).join('')}
+        ${ui.isAdmin?`<td style="white-space:nowrap"><button class="btn sm" data-act="renameStaff" data-id="${esc(x.email)}">名前</button> ${x.email===me?'<span class="muted">自分</span>':`<button class="btn sm" data-act="toggleAdmin" data-id="${esc(x.email)}">${x.is_admin?'スタッフにする':'管理者にする'}</button> <button class="btn sm dan" data-act="delStaff" data-id="${esc(x.email)}">外す</button>`}</td>`:''}</tr>`).join('')}
       </table>
       ${ui.isAdmin?`<form data-form="addStaff" style="margin-top:12px">
         <div class="f2"><div class="f"><label>名前</label><input name="name" required></div><div class="f"><label>メールアドレス</label><input name="email" type="email" required></div></div>
@@ -620,9 +685,9 @@ function viewStaff(){
 }
 
 /* ---------- 全体の描画 ---------- */
-const TABS=[['home','ホーム'],['calendar','カレンダー'],['events','大会'],['routines','通常タスク'],['templates','テンプレ'],['settings','設定']];
+const TABS=[['home','ホーム'],['calendar','カレンダー'],['events','大会'],['routines','通常タスク'],['report','実績'],['templates','テンプレ'],['settings','設定']];
 function render(){
-  const views={home:viewHome,calendar:viewCalendar,events:()=>ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,templates:viewTemplates,settings:viewSettings};
+  const views={home:viewHome,calendar:viewCalendar,events:()=>ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,report:viewReport,templates:viewTemplates,settings:viewSettings};
   const y=window.scrollY;
   document.getElementById('app').innerHTML=`
     <header><div class="bar"><h1>モルマニ タスク管理</h1>${DB.mode==='local'?'<span class="badge">お試しモード</span>':''}</div>
@@ -688,18 +753,20 @@ function taskForm(t){
       <div class="f"><label>状況</label><select name="status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===t.status?'selected':''}>${v[1]}</option>`).join('')}</select></div></div>
     <div class="f2"><div class="f"><label>担当</label><select name="assignee">${memberOptions(t.assignee)}</select></div>
       <div class="f"><label>カテゴリ</label><select name="category">${catOptions(t.category)}</select></div></div>
-    <div class="f"><label>大会</label><select name="event_id">${evOpts}</select></div>
+    <div class="f2"><div class="f"><label>大会</label><select name="event_id">${evOpts}</select></div>
+      <div class="f"><label>工数（分）　※1工数＝1分が目安</label><input name="effort" type="number" min="0" step="5" value="${Number(t.effort||0)}"></div></div>
+    ${t.wip_by||t.done_by?`<div class="muted" style="margin-bottom:10px">${t.wip_by?`作業中にした人：${esc(t.wip_by)}（${fmtTime(t.wip_at)}）　`:''}${t.done_by?`${t.status==='skip'?'不要にした人':'完了にした人'}：${esc(t.done_by)}（${fmtTime(t.done_at)}）`:''}</div>`:''}
     <div class="f2"><div class="f"><label>マニュアル名</label><input name="manual_name" value="${esc(t.manual_name)}"></div>
       <div class="f"><label>マニュアルのリンク（Googleドキュメント等）</label><input name="manual_url" type="url" value="${esc(t.manual_url)}" placeholder="https://docs.google.com/..."></div></div>
     <div class="f"><label>備考</label><textarea name="memo">${esc(t.memo)}</textarea></div>`;
 }
 function editTask(id,presetEvent){
   const isNew=!id;
-  const base=isNew?{id:uid(),event_id:presetEvent||null,template_id:null,category:catList().includes('その他')?'その他':catList()[0]||'',title:'',due:today(),days:null,status:'todo',assignee:ui.who||null,manual_name:'',manual_url:'',memo:'',sort:9999}
+  const base=isNew?{id:uid(),event_id:presetEvent||null,template_id:null,category:catList().includes('その他')?'その他':catList()[0]||'',title:'',due:today(),days:null,status:'todo',effort:0,assignee:ui.who||null,manual_name:'',manual_url:'',memo:'',sort:9999}
     :S.tasks.find(x=>x.id===id);
   if(!base) return;
   openModal(isNew?'タスクを追加':'タスクの詳細',taskForm(base),fd=>{
-    const t={...base,title:fd.title,due:fd.due,status:fd.status,category:fd.category,manual_name:fd.manual_name,manual_url:fd.manual_url,memo:fd.memo,
+    const t={...(fd.status!==base.status?withStatus(base,fd.status):base),title:fd.title,due:fd.due,effort:Math.max(0,parseInt(fd.effort||'0',10)||0),category:fd.category,manual_name:fd.manual_name,manual_url:fd.manual_url,memo:fd.memo,
       assignee:fd.assignee||null,event_id:fd.event_id||null};
     const ev=t.event_id?evById(t.event_id):null; t.days=ev?diffDays(t.due,ev.date):null;
     put('tasks',t); closeModal(); toast(isNew?'追加しました':'保存しました');
@@ -773,7 +840,7 @@ function editEvent(id){
     <div class="f"><label>メモ</label><textarea name="memo">${esc(ev.memo||'')}</textarea></div>`,fd=>{
     const diff=diffDays(fd.date,ev.date);
     put('events',{...ev,name:fd.name,date:fd.date,venue:fd.venue||'',format:fd.format||'',memo:fd.memo||''});
-    if(diff&&fd.shift) put('tasks',S.tasks.filter(t=>t.event_id===id&&t.status!=='done').map(t=>({...t,due:addDays(t.due,diff)})));
+    if(diff&&fd.shift) put('tasks',S.tasks.filter(t=>t.event_id===id&&isOpen(t)).map(t=>({...t,due:addDays(t.due,diff)})));
     closeModal(); toast('保存しました');
   },{danger:{label:'大会を削除',fn:()=>{
     const ts=S.tasks.filter(t=>t.event_id===id);
@@ -795,9 +862,10 @@ function editTemplate(id){
         <select name="when"><option value="before" ${when==='before'?'selected':''}>日前</option><option value="day" ${when==='day'?'selected':''}>（大会当日）</option><option value="after" ${when==='after'?'selected':''}>日後</option></select></div></div></div>
     <div class="f2"><div class="f"><label>マニュアル名</label><input name="manual_name" value="${esc(base.manual_name)}"></div>
       <div class="f"><label>マニュアルのリンク</label><input name="manual_url" type="url" value="${esc(base.manual_url)}" placeholder="https://docs.google.com/..."></div></div>
+    <div class="f"><label>工数（分）　※1工数＝1分が目安</label><input name="effort" type="number" min="0" step="5" value="${Number(base.effort||0)}"></div>
     <div class="f"><label>備考（タスクにも引き継がれます）</label><textarea name="memo">${esc(base.memo)}</textarea></div>`,fd=>{
       const n=Math.abs(parseInt(fd.n||'0',10)), days=fd.when==='before'?-n:fd.when==='after'?n:0;
-      put('templates',{...base,title:fd.title,category:fd.category,days,manual_name:fd.manual_name,manual_url:fd.manual_url,memo:fd.memo});
+      put('templates',{...base,title:fd.title,category:fd.category,days,effort:Math.max(0,parseInt(fd.effort||'0',10)||0),manual_name:fd.manual_name,manual_url:fd.manual_url,memo:fd.memo});
       closeModal(); toast('テンプレを保存しました');
     },{danger:isNew?null:{label:'テンプレから削除',fn:()=>{if(confirm(`テンプレから「${base.title}」を削除します。登録済みの大会のタスクは残ります。よろしいですか？`)){del('templates',base.id);closeModal()}}}});
 }
@@ -846,8 +914,10 @@ function editRoutine(id){
 const ACT={
   tab:d=>{ui.tab=d.id;ui.eventId=null;render();window.scrollTo(0,0)},
   who:d=>{ui.who=d.id;lsSet('mm_who',d.id);render()},
+  period:d=>{ui.period=d.id;render()},
   sort:d=>{ui.sort=d.id;lsSet('mm_sort',d.id);render()},
-  cycle:d=>{const t=S.tasks.find(x=>x.id===d.id);const nx={todo:'wip',wip:'done',done:'todo'}[t.status];put('tasks',{...t,status:nx});toast(`「${t.title}」を${STATUS[nx][1]}にしました`)},
+  cycle:d=>{const t=S.tasks.find(x=>x.id===d.id);const nx={todo:'wip',wip:'done',done:'todo',skip:'todo'}[t.status]||'todo';put('tasks',withStatus(t,nx));toast(`「${t.title}」を${STATUS[nx][1]}にしました`)},
+  skip:d=>{const t=S.tasks.find(x=>x.id===d.id);put('tasks',withStatus(t,'skip'));toast(`「${t.title}」を不要にしました（丸を押すと戻せます）`)},
   editTask:d=>editTask(d.id),
   newTask:d=>editTask(null,d.id),
   postComment:d=>{const ta=document.getElementById('cbody');const body=(ta.value||'').trim();if(!body)return;
@@ -892,6 +962,9 @@ const ACT={
   resetDemo:()=>{if(confirm('このブラウザに入っているデータを消して、お試しデータに戻します。よろしいですか？')){for(const t of TABLES)S[t]=[];seedDemo();LocalDB.save();render();toast('お試しデータに戻しました')}},
   logout:async()=>{await CloudDB.sb.auth.signOut();location.reload()},
   loginMode:d=>renderLogin('',d.id),
+  renameStaff:async d=>{const x=S.staff.find(y=>y.email===d.id);const nn=(prompt('表示する名前（やり取り・実績に出ます）',x.name)||'').trim();if(!nn||nn===x.name)return;
+    const {error}=await CloudDB.sb.from('staff_access').update({name:nn}).eq('email',x.email);
+    if(error){toast('変更できませんでした：'+error.message);return} x.name=nn;render();toast('名前を変えました')},
   delStaff:async d=>{const x=S.staff.find(y=>y.email===d.id);
     if(!confirm(`${x.name||x.email} をログインできる人から外します。この人はすぐにアプリを見られなくなります。よろしいですか？`))return;
     const {error}=await CloudDB.sb.from('staff_access').delete().eq('email',x.email);
