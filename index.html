@@ -224,6 +224,17 @@ html,body{max-width:100%;overflow-x:hidden}
 .cmt .cb,.chatrow .b,.task .t{overflow-wrap:anywhere}
 #cbody{min-width:0;flex:1}
 @media (max-width:760px){input,select,textarea{font-size:16px!important}}
+/* 第7版：モルマニの黄色を、うすく・ひかえめに */
+:root{--bg:#FAF9F3;--line:#E8E5D9;--accent-soft:#FFF5D1}
+@media (prefers-color-scheme:dark){:root{--accent-soft:#2f2a16}}
+header{border-bottom:3px solid var(--accent)}
+.tag{background:var(--accent-soft);color:var(--ink)}
+.cell.td .d{background:var(--accent);color:#111}
+.dayhead.today{color:var(--ink);background:var(--accent-soft);border-radius:6px;padding:2px 8px}
+.tbl tr.click:hover td,.tbl tr.on td{background:var(--accent-soft)}
+.login .card{border-top-color:var(--accent)}
+.evn{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--c) 15%,var(--card));border:1px solid color-mix(in srgb,var(--c) 45%,transparent);color:var(--ink);border-radius:99px;padding:0 8px;font-weight:600;font-size:12px;line-height:1.6}
+.evn .cdot{background:var(--c)}
 </style>
 </head>
 <body>
@@ -240,9 +251,10 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='20261029-214727';   // 反映のたびに変える（新しい版のお知らせに使う）
-const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads'];
-const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],staff:[]};
+const APP_VERSION='20261030-101513';   // 反映のたびに変える（新しい版のお知らせに使う）
+const OPTIONAL_TABLES=['event_colors'];   // まだ Supabase に無くてもアプリは動く
+const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads','event_colors'];
+const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],event_colors:[],staff:[]};
 const ui = {tab:'home', who:lsGet('mm_who')||'', sort:lsGet('mm_sort')||'date', eventId:null, evFilter:'', setId:null,
   calMonth:null, calDay:null, user:null, isAdmin:false, noAccess:false};
 const DEFAULT_SET_ID='00000000-0000-4000-8000-000000000001';
@@ -277,7 +289,10 @@ const memName=id=>(S.members.find(m=>m.id===id)||{}).name||'';
 const myEmail=()=>DB.mode==='cloud'?((ui.user&&ui.user.email)||'').toLowerCase():'demo@local';
 const myName=()=>{const s=S.staff.find(x=>x.email===myEmail());return s&&s.name?s.name:(DB.mode==='cloud'?myEmail():'あなた')};
 const EV_COLORS=['#3d4a5c','#8a6a2f','#4b6b58','#6b4f6e','#8a4b4b','#3f6670','#6f6a3a','#55525e'];
-function evColor(id){const sorted=[...S.events].sort((a,b)=>a.date<b.date?-1:1);const i=sorted.findIndex(e=>e.id===id);return EV_COLORS[(i<0?0:i)%EV_COLORS.length]}
+/* 大会の色：大会形式の色 → 場所の色 → 自動 の順 */
+const ecOf=(k,n)=>{const r=n&&S.event_colors.find(x=>x.id===k+'|'+n);return (r&&r.color)||''};
+function evColor(id){const ev=evById(id);return (ev&&(ecOf('format',ev.format)||ecOf('venue',ev.venue)))||evAutoColor(id)}
+function evAutoColor(id){const sorted=[...S.events].sort((a,b)=>a.date<b.date?-1:1);const i=sorted.findIndex(e=>e.id===id);return EV_COLORS[(i<0?0:i)%EV_COLORS.length]}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3200)}
 function loadScript(src){return new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)})}
 
@@ -435,7 +450,7 @@ const CloudDB = {
     S.staff=st||[];
     ui.isAdmin=S.staff.some(x=>x.email===myEmail()&&x.is_admin);
     const res=await Promise.all(TABLES.map(t=>this.sb.from(t).select('*').range(0,9999)));
-    res.forEach((r,i)=>{if(r.error) throw new Error(r.error.message+'（表「'+TABLES[i]+'」）'); S[TABLES[i]]=r.data});
+    res.forEach((r,i)=>{if(r.error&&OPTIONAL_TABLES.includes(TABLES[i])){S[TABLES[i]]=[];ui.missing=(ui.missing||[]).concat(TABLES[i]);return} if(r.error) throw new Error(r.error.message+'（表「'+TABLES[i]+'」）'); S[TABLES[i]]=r.data});
     if(ui.isAdmin){ const ups=fillMissing(); for(const t of Object.keys(ups)) await this.upsert(t,ups[t]); }
   },
   async upsert(t,rows){if(!rows.length)return;const {error}=await this.sb.from(t).upsert(rows);if(error)throw error},
@@ -523,7 +538,7 @@ function taskRow(t,{showEvent=true}={}){
       <div class="t">${esc(t.title)}</div>
       <div class="meta">
         <span class="${late?'late':''}">${md(t.due)}・${rel(t.due)}</span>
-        ${showEvent?(ev?`<span class="evn"><i class="cdot" style="--c:${evColor(ev.id)}"></i>${esc(evName(ev))}</span>`:'<span>単発タスク</span>'):''}
+        ${showEvent?(ev?`<span class="evn" style="--c:${evColor(ev.id)}"><i class="cdot"></i>${esc(evName(ev))}</span>`:'<span>単発タスク</span>'):''}
         ${ui.sort!=='cat'&&t.category?catChip(t.category):''}
         ${t.assignee?`<span>担当：${esc(memName(t.assignee))}</span>`:`<span class="noone">担当未定</span>`}
         ${t.effort?`<span>工数${Number(t.effort)}</span>`:''}
@@ -697,7 +712,21 @@ function viewEvents(){
     ${sets().length>1?`<div class="chips" style="margin-top:10px"><span class="muted">テンプレ：</span><button class="chip ${!f?'on':''}" data-act="evFilter" data-id="">すべて</button>
       ${sets().map(s=>`<button class="chip ${f===s.id?'on':''}" data-act="evFilter" data-id="${s.id}">${esc(s.name)}</button>`).join('')}</div>`:''}
     <h2>これからの大会 <span class="n">${up.length}件</span></h2>${up.length?`<div class="grid">${up.map(evCard).join('')}</div>`:'<div class="empty">ありません</div>'}
-    <h2>終わった大会 <span class="n">${past.length}件</span></h2>${past.length?`<div class="grid">${past.map(evCard).join('')}</div>`:'<div class="empty">ありません</div>'}`;
+    <h2>終わった大会 <span class="n">${past.length}件</span></h2>${past.length?`<div class="grid">${past.map(evCard).join('')}</div>`:'<div class="empty">ありません</div>'}
+    ${evColorSection()}`;
+}
+function evColorSection(){
+  const row=(k,n)=>{const c=ecOf(k,n), cnt=S.events.filter(e=>(k==='format'?e.format:e.venue)===n).length;
+    return `<div class="row"><input type="color" class="colorpick" value="${c||'#cfcfcf'}" data-evcolor="${k}" data-name="${esc(n)}" title="押すと色を変えられます">
+      <span style="flex:1">${esc(n)} <span class="muted">${cnt}大会</span></span>
+      ${c?`<button class="btn sm" data-act="evColorReset" data-id="${esc(k+'|'+n)}">自動に戻す</button>`:'<span class="muted">自動</span>'}</div>`};
+  const uniq=a=>[...new Set(a.filter(Boolean))].sort();
+  const fs=uniq(S.events.map(e=>e.format)), vs=uniq(S.events.map(e=>e.venue));
+  return `<h2>大会の色</h2><div class="card">
+    ${(ui.missing||[]).includes('event_colors')?'<div class="note" style="margin-bottom:8px">色を保存する場所がまだ準備中です（管理者が「追加で貼る文章_6」を Supabase に貼ると使えるようになります）</div>':''}
+    <div class="muted" style="margin-bottom:10px">左の色を押すと変えられます。<b>大会形式の色が優先</b>で、形式に色がないときは場所の色を使います。どちらも無いときは自動で色がつきます。</div>
+    <div class="lbl">大会形式</div><div class="list" style="gap:4px;margin:4px 0 14px">${fs.map(n=>row('format',n)).join('')||'<div class="empty">まだありません（大会の登録・編集で「大会形式」を入れると出てきます）</div>'}</div>
+    <div class="lbl">場所</div><div class="list" style="gap:4px;margin-top:4px">${vs.map(n=>row('venue',n)).join('')||'<div class="empty">まだありません（大会の登録・編集で「場所」を入れると出てきます）</div>'}</div></div>`;
 }
 
 function viewEvent(){
@@ -929,7 +958,7 @@ function viewChat(){
     <h2>チャット <span class="n">${ids.length}件${ur?`・未読 ${ur}件`:''}</span></h2>
     ${ids.length?`<div class="list">${ids.map(x=>{const t=S.tasks.find(y=>y.id===x.id),ev=t.event_id&&evById(t.event_id),u=unreadOf(x.id);
       return `<div class="card chatrow ${u?'unread':''}" data-act="openChat" data-id="${x.id}">
-        <div class="b"><div class="row" style="gap:6px"><b>${esc(t.title)}</b>${ev?`<span class="muted"><i class="cdot" style="--c:${evColor(ev.id)}"></i> ${esc(evName(ev))}</span>`:''}${u?`<span class="dot">${u}</span>`:''}</div>
+        <div class="b"><div class="row" style="gap:6px"><b>${esc(t.title)}</b>${ev?`<span class="evn" style="--c:${evColor(ev.id)}"><i class="cdot"></i>${esc(evName(ev))}</span>`:''}${u?`<span class="dot">${u}</span>`:''}</div>
           <div class="last"><span class="muted">${esc(x.last.author_name||x.last.author_email)}：</span>${esc(x.last.body)}</div></div>
         <div class="muted" style="white-space:nowrap">${fmtTime(x.last.created_at)}<br>${x.n}件</div></div>`}).join('')}</div>`:'<div class="empty">まだチャットはありません</div>'}`;
 }
@@ -1119,6 +1148,7 @@ const ACT={
   who:d=>{ui.who=d.id;lsSet('mm_who',d.id);render()},
   period:d=>{if(d.id==='custom'&&!ui.repFrom){[ui.repFrom,ui.repTo]=repRange()}ui.period=d.id;ui.repSel=null;ui.repScroll=null;render()},
   repUnit:d=>{ui.repUnit=d.id;render()},
+  evColorReset:d=>{del('event_colors',[d.id]);toast('自動の色に戻しました')},
   repWho:d=>{ui.repWho=d.id;render()},
   repSel:d=>{ui.repSel=ui.repSel===d.id?null:d.id;render()},
   sort:d=>{ui.sort=d.id;lsSet('mm_sort',d.id);render()},
@@ -1197,6 +1227,9 @@ const ARRAY_FIELDS=['tpl','link_name','link_url'];
 /* 実績：期間を指定 */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.rep||!el.value)return;
   if(el.dataset.rep==='from')ui.repFrom=el.value;else ui.repTo=el.value;ui.repSel=null;ui.repScroll=null;render()});
+/* 大会形式・場所の色を変える */
+document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.evcolor)return;
+  const k=el.dataset.evcolor,n=el.dataset.name;put('event_colors',{id:k+'|'+n,kind:k,name:n,color:el.value});toast(`「${n}」の色を変えました`)});
 /* カテゴリの色を変える */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.catcolor)return;
   const c=S.categories.find(x=>x.id===el.dataset.catcolor);if(c){put('categories',{...c,color:el.value});toast(`「${c.name}」の色を変えました`)}});
