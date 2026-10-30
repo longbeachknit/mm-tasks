@@ -224,6 +224,17 @@ html,body{max-width:100%;overflow-x:hidden}
 .cmt .cb,.chatrow .b,.task .t{overflow-wrap:anywhere}
 #cbody{min-width:0;flex:1}
 @media (max-width:760px){input,select,textarea{font-size:16px!important}}
+/* 第8版：賞品シート */
+.prank{margin-top:14px}
+.prank .ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:5px 8px;margin-bottom:6px}
+.pit{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+.pit>input{margin-top:4px!important;width:18px!important;height:18px}
+.pit .b{flex:1;min-width:0;cursor:pointer}
+.pit .pn{font-weight:600;overflow-wrap:anywhere;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pit .pn a{color:var(--ink)}
+.pit.done{opacity:.6}
+.pit .mv{display:flex;flex-direction:column;gap:3px;flex:none}
+.pit .mv .btn{padding:0 7px}
 /* 第7版：モルマニの黄色を、うすく・ひかえめに */
 :root{--bg:#FAF9F3;--line:#E8E5D9;--accent-soft:#FFF5D1}
 @media (prefers-color-scheme:dark){:root{--accent-soft:#2f2a16}}
@@ -251,10 +262,10 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='20261030-102600';   // 反映のたびに変える（新しい版のお知らせに使う）
-const OPTIONAL_TABLES=['event_colors'];   // まだ Supabase に無くてもアプリは動く
-const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads','event_colors'];
-const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],event_colors:[],staff:[]};
+const APP_VERSION='20261030-183015';   // 反映のたびに変える（新しい版のお知らせに使う）
+const OPTIONAL_TABLES=['event_colors','prize_sets','prize_items'];   // まだ Supabase に無くてもアプリは動く
+const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads','event_colors','prize_sets','prize_items'];
+const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],event_colors:[],prize_sets:[],prize_items:[],staff:[]};
 const ui = {tab:'home', who:lsGet('mm_who')||'', sort:lsGet('mm_sort')||'date', eventId:null, evFilter:'', setId:null,
   calMonth:null, calDay:null, user:null, isAdmin:false, noAccess:false};
 const DEFAULT_SET_ID='00000000-0000-4000-8000-000000000001';
@@ -531,7 +542,8 @@ function taskRow(t,{showEvent=true}={}){
   const ev=t.event_id?evById(t.event_id):null;
   const nc=commentsOf(t.id).length, ur=unreadOf(t.id);
   const lks=[...(t.manual_url?[{name:'マニュアル',url:t.manual_url}]:[]),...linksOf(t)];
-  const lk=lks.length||t.manual_name?`<div class="lk">${lks.map(l=>`<a class="man" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}を見る</a>`).join('')}${!t.manual_url&&t.manual_name?'<span class="man none" title="リンク未設定">マニュアル未設定</span>':''}</div>`:'';
+  const pz=t.category==='賞品'&&t.event_id?`<a class="man" href="#" data-act="openPrize" data-id="${t.event_id}">🏆 賞品シート</a>`:'';
+  const lk=lks.length||t.manual_name||pz?`<div class="lk">${pz}${lks.map(l=>`<a class="man" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}を見る</a>`).join('')}${!t.manual_url&&t.manual_name?'<span class="man none" title="リンク未設定">マニュアル未設定</span>':''}</div>`:'';
   return `<div class="task st-${t.status} ${late?'late':''}" style="--c:${catColor(t.category)}">
     <button class="st" data-act="cycle" data-id="${t.id}" title="${STATUS[t.status][1]}（押すと切り替え）">${STATUS[t.status][0]}</button>
     <div class="body" data-act="editTask" data-id="${t.id}">
@@ -557,7 +569,7 @@ function grouped(ts,{ev=null,showEvent=true,headless=false}={}){
   if(ui.sort==='cat'){
     const cats=[...new Set(ts.map(x=>x.category||'（カテゴリなし）'))].sort((a,b)=>catIndex(a)-catIndex(b));
     return cats.map(c=>{const items=ts.filter(x=>(x.category||'（カテゴリなし）')===c);const d=items.filter(x=>!isOpen(x)).length;
-      return `<div class="dayhead cathead" style="--c:${catColor(c)}">${esc(c)}　<span class="n">${ev?`完了 ${d}/${items.length}`:`${items.length}件`}</span></div>
+      return `<div class="dayhead cathead" style="--c:${catColor(c)}">${esc(c)}　<span class="n">${ev?`完了 ${d}/${items.length}`:`${items.length}件`}</span>${ev&&c==='賞品'?`<span class="sp"></span><button class="btn sm" data-act="openPrize" data-id="${ev.id}">🏆 賞品シート</button>`:''}</div>
         <div class="list">${items.map(x=>taskRow(x,{showEvent})).join('')}</div>`}).join('');
   }
   if(headless) return `<div class="list">${ts.map(x=>taskRow(x,{showEvent})).join('')}</div>`;
@@ -736,6 +748,7 @@ function viewEvent(){
   return `<div class="row"><button class="btn sm" data-act="back">← 大会一覧</button></div>
     <div class="card" style="margin-top:10px;border-left:4px solid ${evColor(ev.id)}">
       <div class="row"><h2 style="margin:0">${esc(evName(ev))}</h2><span class="sp"></span>
+        <button class="btn sm" data-act="openPrize" data-id="${ev.id}">🏆 賞品シート${prizeOf('event',ev.id).length?'（'+yen(prizeSum(prizeOf('event',ev.id)))+'）':''}</button>
         <button class="btn sm" data-act="editEvent" data-id="${ev.id}">大会情報を編集</button></div>
       ${ev.short?`<div class="evsub">${esc(ev.name)}</div>`:''}
       <div class="muted">${md(ev.date)}・${rel(ev.date)}</div>
@@ -748,6 +761,126 @@ function viewEvent(){
     </div>
     <div class="row" style="margin-top:12px">${sortChips()}<span class="sp"></span><button class="btn sm" data-act="newTask" data-id="${ev.id}">＋ タスクを追加</button></div>
     ${ts.length?grouped(ts,{ev,showEvent:false}):'<div class="empty">タスクがありません</div>'}`;
+}
+
+/* ===== 賞品シート ===== */
+const yen=n=>'¥'+Number(n||0).toLocaleString('ja-JP');
+const prizeSets=()=>[...S.prize_sets].sort(bySort);
+const prizeOf=(kind,id)=>S.prize_items.filter(x=>kind==='event'?x.event_id===id:x.set_id===id).sort((a,b)=>(a.sort||0)-(b.sort||0));
+const prizeSub=x=>Number(x.price||0)*Number(x.qty||0);
+const prizeSum=xs=>xs.reduce((a,x)=>a+prizeSub(x),0);
+const RANKS=['優勝','準優勝','3位','4位','5位','ベスト8','特別賞','ブービー賞','参加賞'];
+function prizeTarget(){const p=ui.prize;return p?{...p,ev:p.kind==='event'?evById(p.id):null,set:p.kind==='set'?S.prize_sets.find(x=>x.id===p.id):null}:null}
+/* 順位ごとにまとめる（並びは、その順位のいちばん上の行の順） */
+function prizeGroups(xs){const g=[];xs.forEach(x=>{const k=x.rank||'（順位なし）';let r=g.find(y=>y.rank===k);if(!r){r={rank:k,items:[]};g.push(r)}r.items.push(x)});return g}
+function renumber(list){put('prize_items',list.map((x,i)=>({...x,sort:i})))}
+function prizeMove(id,dir){const x=S.prize_items.find(y=>y.id===id);if(!x)return;const t=prizeTarget();const xs=prizeOf(t.kind,t.id);
+  const same=xs.filter(y=>(y.rank||'')===(x.rank||''));const i=same.indexOf(x),j=i+dir;if(j<0||j>=same.length)return;
+  const a=xs.indexOf(same[i]),b=xs.indexOf(same[j]);[xs[a],xs[b]]=[xs[b],xs[a]];renumber(xs)}
+function rankMove(rank,dir){const t=prizeTarget();const g=prizeGroups(prizeOf(t.kind,t.id));const i=g.findIndex(r=>r.rank===rank),j=i+dir;if(j<0||j>=g.length)return;
+  [g[i],g[j]]=[g[j],g[i]];renumber(g.flatMap(r=>r.items))}
+function viewPrize(){
+  const t=prizeTarget(); if(!t||(!t.ev&&!t.set)){ui.prize=null;return ui.tab==='events'?viewEvents():viewTemplates()}
+  const xs=prizeOf(t.kind,t.id), g=prizeGroups(xs), isEv=t.kind==='event';
+  const fx=xs.filter(x=>x.fixed), og=xs.filter(x=>!x.fixed), total=prizeSum(xs), bud=isEv?t.ev.prize_budget:null;
+  const head=isEv?`<div class="row"><button class="btn sm" data-act="openEvent" data-id="${t.ev.id}">← ${esc(evName(t.ev))}のタスク</button></div>
+      <div class="row" style="margin-top:10px"><h2 style="margin:0">🏆 ${esc(evName(t.ev))} の賞品シート</h2><span class="muted">${md(t.ev.date)}・${rel(t.ev.date)}</span></div>`
+    :`<div class="row"><button class="btn sm" data-act="prizeBack">← テンプレ一覧</button></div>
+      <div class="row" style="margin-top:10px"><h2 style="margin:0">賞品テンプレ：${esc(t.set.name)}</h2><span class="sp"></span><button class="btn sm" data-act="editPrizeSet" data-id="${t.set.id}">名前・説明を変更</button></div>
+      ${t.set.memo?`<div class="muted">${esc(t.set.memo)}</div>`:''}`;
+  const item=x=>`<div class="pit ${x.done?'done':''}">
+      ${isEv?`<input type="checkbox" data-prizedone="${x.id}" ${x.done?'checked':''} title="手配済み">`:''}
+      <div class="b" data-act="editPrize" data-id="${x.id}">
+        <div class="pn">${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name||'（名前なし）')} ↗</a>`:esc(x.name||'（名前なし）')}
+          <span class="tag ${x.fixed?'':'gray'}">${x.fixed?'固定':'オリジナル'}</span></div>
+        <div class="meta"><span>${yen(x.price)} × ${Number(x.qty||0)}個 ＝ <b style="color:var(--ink)">${yen(prizeSub(x))}</b></span>${x.memo?`<span>📝 ${esc(x.memo)}</span>`:''}</div>
+        ${x.manual_url?`<div class="lk"><a class="man" href="${esc(x.manual_url)}" target="_blank" rel="noopener">${esc(x.manual_name||'発注マニュアル')}を見る</a></div>`:x.manual_name?`<div class="lk"><span class="man none">${esc(x.manual_name)}（リンク未設定）</span></div>`:''}
+      </div>
+      <div class="mv"><button class="btn sm" data-act="prizeMove" data-id="${x.id}" data-dir="-1">↑</button><button class="btn sm" data-act="prizeMove" data-id="${x.id}" data-dir="1">↓</button></div></div>`;
+  return `${head}
+    <div class="stat" style="margin-top:12px">
+      <div class="card"><div class="muted">合計</div><b>${yen(total)}</b></div>
+      <div class="card"><div class="muted">固定の賞品</div><b>${yen(prizeSum(fx))}</b><div class="muted">${fx.length}品</div></div>
+      <div class="card"><div class="muted">オリジナル</div><b>${yen(prizeSum(og))}</b><div class="muted">${og.length}品</div></div>
+      ${isEv?`<div class="card"><div class="muted">予算の上限</div><div class="row" style="gap:4px;flex-wrap:nowrap">¥<input class="mini" style="width:100%" type="number" min="0" step="1000" value="${bud??''}" placeholder="未設定" data-inline="prizeBudget" data-id="${t.ev.id}"></div>
+        ${bud?`<div class="${total>bud?'late':'muted'}" style="font-size:13px;font-weight:600">${total>bud?`${yen(total-bud)} オーバー`:`残り ${yen(bud-total)}`}</div>`:''}</div>
+      <div class="card"><div class="muted">手配済み</div><b>${xs.filter(x=>x.done).length}/${xs.length}</b></div>`:''}
+    </div>
+    <div class="row" style="margin-top:12px">
+      ${isEv?`<button class="btn sm" data-act="prizeLoad">📥 テンプレから読み込む</button><button class="btn sm" data-act="prizeSave">📤 テンプレとして保存</button>`:''}
+      <span class="sp"></span><button class="btn pri sm" data-act="newPrize" data-rank="">＋ 賞品を追加</button></div>
+    ${g.length?g.map((r,i)=>`<div class="prank">
+      <div class="ph"><b>${esc(r.rank)}</b><span class="muted">${r.items.length}品・${yen(prizeSum(r.items))}</span><span class="sp"></span>
+        <button class="btn sm" data-act="rankMove" data-id="${esc(r.rank)}" data-dir="-1" ${i===0?'disabled':''}>↑</button><button class="btn sm" data-act="rankMove" data-id="${esc(r.rank)}" data-dir="1" ${i===g.length-1?'disabled':''}>↓</button>
+        <button class="btn sm" data-act="newPrize" data-rank="${esc(r.rank==='（順位なし）'?'':r.rank)}">＋ この順位に追加</button></div>
+      <div class="list">${r.items.map(item).join('')}</div></div>`).join('')
+    :`<div class="empty">${isEv?'まだ賞品がありません。「📥 テンプレから読み込む」で、いつもの賞品をまとめて入れられます。':'まだ賞品がありません。「＋ 賞品を追加」から入れてください。'}</div>`}
+    ${xs.length?`<div class="card" style="margin-top:14px"><div class="row"><b>合計</b><span class="sp"></span><b style="font-size:18px">${yen(total)}</b></div>
+      ${g.map(r=>`<div class="row muted"><span>${esc(r.rank)}</span><span class="sp"></span><span>${yen(prizeSum(r.items))}</span></div>`).join('')}</div>`:''}`;
+}
+function editPrize(id,rank=''){
+  const t=prizeTarget(); if(!t) return;
+  const isNew=!id, xs=prizeOf(t.kind,t.id);
+  const base=isNew?{id:uid(),event_id:t.kind==='event'?t.id:null,set_id:t.kind==='set'?t.id:null,rank,name:'',url:'',price:0,qty:1,fixed:t.kind==='set',manual_name:'',manual_url:'',done:false,memo:'',
+    sort:(()=>{const same=xs.filter(x=>(x.rank||'')===rank);return same.length?same[same.length-1].sort+0.5:xs.length})()}:S.prize_items.find(x=>x.id===id);
+  const ranks=[...new Set([...prizeGroups(xs).map(r=>r.rank).filter(r=>r!=='（順位なし）'),...RANKS])];
+  openModal(isNew?'賞品を追加':'賞品を編集',`
+    <div class="f2"><div class="f"><label>順位</label><input name="rank" list="ranks" value="${esc(base.rank)}" placeholder="例：優勝">${datalist('ranks',ranks)}</div>
+      <div class="f"><label>区分</label><select name="fixed"><option value="1" ${base.fixed?'selected':''}>固定（毎回同じ）</option><option value="0" ${base.fixed?'':'selected'}>オリジナル（この大会だけ）</option></select></div></div>
+    <div class="f"><label>賞品名</label><input name="name" value="${esc(base.name)}" required></div>
+    <div class="f"><label>商品ページのリンク（任意）</label><input name="url" type="url" value="${esc(base.url)}" placeholder="https://..."></div>
+    <div class="f2"><div class="f"><label>予算（1個あたり・円）</label><input name="price" type="number" min="0" step="1" value="${Number(base.price||0)}"></div>
+      <div class="f"><label>個数</label><input name="qty" type="number" min="0" step="1" value="${Number(base.qty??1)}"></div></div>
+    <div class="f2"><div class="f"><label>発注マニュアルの名前（任意）</label><input name="manual_name" value="${esc(base.manual_name)}" placeholder="例：【マニュアル】賞状発注"></div>
+      <div class="f"><label>発注マニュアルのリンク</label><input name="manual_url" type="url" value="${esc(base.manual_url)}" placeholder="https://docs.google.com/..."></div></div>
+    <div class="f"><label>メモ</label><textarea name="memo">${esc(base.memo)}</textarea></div>`,fd=>{
+      const nr=(fd.rank||'').trim();
+      let sort=base.sort;
+      if(!isNew&&nr!==(base.rank||'')){const same=xs.filter(x=>(x.rank||'')===nr&&x.id!==base.id);sort=same.length?same[same.length-1].sort+0.5:Math.max(0,...xs.map(x=>x.sort||0))+1}
+      put('prize_items',{...base,rank:nr,name:fd.name.trim(),url:(fd.url||'').trim(),price:Math.max(0,parseInt(fd.price||'0',10)||0),qty:Math.max(0,parseInt(fd.qty||'0',10)||0),
+        fixed:fd.fixed==='1',manual_name:(fd.manual_name||'').trim(),manual_url:(fd.manual_url||'').trim(),memo:fd.memo||'',sort});
+      closeModal(); toast('保存しました');
+    },{danger:isNew?null:{label:'削除',fn:()=>{if(confirm(`「${base.name}」を削除します。よろしいですか？`)){del('prize_items',[base.id]);closeModal()}}}});
+}
+function prizeLoad(){
+  const t=prizeTarget(); if(!t||t.kind!=='event') return;
+  const all=prizeSets(); if(!all.length){toast('先に「テンプレ」タブで賞品テンプレを作ってください');return}
+  const has=prizeOf('event',t.id).length;
+  openModal('テンプレから読み込む',`
+    <div class="f"><label>読み込む賞品テンプレ</label><select name="set">${all.map(p=>`<option value="${p.id}">${esc(p.name)}（${prizeOf('set',p.id).length}品・${yen(prizeSum(prizeOf('set',p.id)))}）</option>`).join('')}</select></div>
+    ${has?`<div class="f"><label>いまシートにある ${has}品 は</label><select name="mode"><option value="add">残したまま、下に足す</option><option value="replace">「固定」の賞品だけ入れかえる（オリジナルは残す）</option></select></div>`:''}`,fd=>{
+      const src=prizeOf('set',fd.set), cur=prizeOf('event',t.id);
+      if(fd.mode==='replace'){const ids=cur.filter(x=>x.fixed).map(x=>x.id);if(ids.length)del('prize_items',ids)}
+      const keep=fd.mode==='replace'?cur.filter(x=>!x.fixed):cur, base=keep.length?Math.max(...keep.map(x=>x.sort||0))+1:0;
+      put('prize_items',src.map((x,i)=>({...x,id:uid(),event_id:t.id,set_id:null,done:false,sort:base+i})));
+      closeModal(); toast(`${src.length}品を読み込みました`);
+  });
+}
+function prizeSaveAsSet(){
+  const t=prizeTarget(); if(!t||t.kind!=='event') return;
+  const all=prizeSets();
+  openModal('テンプレとして保存',`
+    <div class="f"><label>保存先</label><select name="to"><option value="">新しい賞品テンプレを作る</option>${all.map(p=>`<option value="${p.id}">「${esc(p.name)}」を上書きする</option>`).join('')}</select></div>
+    <div class="f"><label>新しく作るときの名前</label><input name="name" placeholder="例：川崎シリーズ用"></div>
+    <label class="ck"><input type="checkbox" name="all"> オリジナルの賞品もテンプレに入れる（ふつうは「固定」だけ）</label>`,fd=>{
+      const src=prizeOf('event',t.id).filter(x=>fd.all||x.fixed);
+      if(!src.length){toast('テンプレに入れる賞品がありません（「固定」の賞品がありません）');return}
+      let sid=fd.to;
+      if(!sid){const n=(fd.name||'').trim();if(!n){toast('名前を入れてください');return}sid=uid();put('prize_sets',{id:sid,name:n,memo:'',sort:S.prize_sets.length})}
+      else{const old=prizeOf('set',sid).map(x=>x.id);if(!confirm('上書きすると、そのテンプレの今の中身は消えます。よろしいですか？'))return;if(old.length)del('prize_items',old)}
+      put('prize_items',src.map((x,i)=>({...x,id:uid(),event_id:null,set_id:sid,done:false,sort:i})));
+      closeModal(); toast('テンプレとして保存しました');
+  });
+}
+function editPrizeSet(id){
+  const isNew=!id, base=isNew?{id:uid(),name:'',memo:'',sort:S.prize_sets.length}:S.prize_sets.find(x=>x.id===id);
+  openModal(isNew?'新しい賞品テンプレ':'賞品テンプレを編集',`
+    <div class="f"><label>名前</label><input name="name" value="${esc(base.name)}" required placeholder="例：川崎シリーズ用"></div>
+    <div class="f"><label>説明（任意）</label><textarea name="memo">${esc(base.memo)}</textarea></div>`,fd=>{
+      put('prize_sets',{...base,name:fd.name.trim(),memo:fd.memo||''}); closeModal();
+      if(isNew){ui.tab='templates';ui.prize={kind:'set',id:base.id};render()} toast('保存しました');
+  },{danger:isNew?null:{label:'テンプレを削除',fn:()=>{if(confirm(`賞品テンプレ「${base.name}」を削除します。大会のシートに読み込み済みの賞品は残ります。よろしいですか？`)){
+      del('prize_items',prizeOf('set',base.id).map(x=>x.id));del('prize_sets',[base.id]);ui.prize=null;closeModal();render()}}}});
 }
 
 function viewCalendar(){
@@ -825,6 +958,11 @@ function viewTemplates(){
     <div class="muted" style="margin-top:8px">工数の欄は、その場で数字を書き換えるだけで保存されます（1工数＝1分が目安）。</div>
     <div class="row" style="margin-top:8px">${sortChips()}<span class="sp"></span><button class="btn pri sm" data-act="newTemplate">＋ このテンプレにタスクを追加</button></div>
     ${ts.length?body:'<div class="empty">まだタスクがありません</div>'}`:''}
+    <h2>賞品テンプレ</h2>
+    <div class="muted" style="margin-bottom:6px">毎回同じ賞品を、順位の並びごと保存しておけます。大会の「🏆 賞品シート」から読み込めます。</div>
+    <div class="list">${prizeSets().map(p=>{const it=prizeOf('set',p.id);return `<div class="card ev" data-act="openPrizeSet" data-id="${p.id}">
+      <div class="row"><span class="nm">${esc(p.name)}</span><span class="sp"></span><span class="muted">${it.length}品・${yen(prizeSum(it))}</span></div>${p.memo?`<div class="muted">${esc(p.memo)}</div>`:''}</div>`}).join('')||'<div class="empty">まだありません</div>'}</div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="newPrizeSet">＋ 新しい賞品テンプレ</button></div>
     <h2>カテゴリの管理</h2>
     <div class="card">
       <div class="muted" style="margin-bottom:8px">左の色を押すと、カテゴリの色を変えられます。並び順は「カテゴリ別」で表示するときの順番になります。名前を変えると、テンプレと登録済みのタスクのカテゴリ名もまとめて変わります。</div>
@@ -871,7 +1009,7 @@ function viewStaff(){
 /* ---------- 全体の描画 ---------- */
 const TABS=[['home','ホーム'],['calendar','カレンダー'],['events','大会'],['routines','繰り返しタスク'],['chat','チャット'],['report','実績'],['templates','テンプレ'],['settings','設定']];
 function render(){
-  const views={home:viewHome,calendar:viewCalendar,events:()=>ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,chat:viewChat,report:viewReport,templates:viewTemplates,settings:viewSettings};
+  const views={home:viewHome,calendar:viewCalendar,events:()=>ui.prize?viewPrize():ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,chat:viewChat,report:viewReport,templates:()=>ui.prize?viewPrize():viewTemplates(),settings:viewSettings};
   const y=window.scrollY;
   document.getElementById('app').innerHTML=`
     <header><div class="bar"><img class="logo" src="logo.png" alt="MM Tasks"><h1>MM-Tasks</h1>${DB.mode==='local'?'<span class="badge">お試しモード</span>':''}</div>
@@ -1144,7 +1282,7 @@ function editRoutine(id){
 
 /* ---------- 操作 ---------- */
 const ACT={
-  tab:d=>{ui.tab=d.id;ui.eventId=null;render();window.scrollTo(0,0)},
+  tab:d=>{ui.tab=d.id;ui.eventId=null;ui.prize=null;render();window.scrollTo(0,0)},
   who:d=>{ui.who=d.id;lsSet('mm_who',d.id);render()},
   period:d=>{if(d.id==='custom'&&!ui.repFrom){[ui.repFrom,ui.repTo]=repRange()}ui.period=d.id;ui.repSel=null;ui.repScroll=null;render()},
   repUnit:d=>{ui.repUnit=d.id;render()},
@@ -1169,8 +1307,19 @@ const ACT={
   checkRoutine:d=>{const c=S.routine_checks.find(x=>x.routine_id===d.id&&x.date===d.day);
     if(c) del('routine_checks',c.id); else put('routine_checks',{id:uid(),routine_id:d.id,date:d.day});},
   editRoutine:d=>editRoutine(d.id), newRoutine:()=>editRoutine(null),
-  openEvent:d=>{ui.tab='events';ui.eventId=d.id;render();window.scrollTo(0,0)},
+  openEvent:d=>{ui.tab='events';ui.eventId=d.id;ui.prize=null;render();window.scrollTo(0,0)},
   back:()=>{ui.eventId=null;render()},
+  openPrize:d=>{ui.tab='events';ui.eventId=d.id;ui.prize={kind:'event',id:d.id};render();window.scrollTo(0,0)},
+  openPrizeSet:d=>{ui.tab='templates';ui.prize={kind:'set',id:d.id};render();window.scrollTo(0,0)},
+  prizeBack:()=>{ui.prize=null;render();window.scrollTo(0,0)},
+  editPrize:d=>editPrize(d.id),
+  newPrize:d=>editPrize(null,d.rank||''),
+  prizeMove:d=>prizeMove(d.id,Number(d.dir)),
+  rankMove:d=>rankMove(d.id,Number(d.dir)),
+  prizeLoad:()=>prizeLoad(),
+  prizeSave:()=>prizeSaveAsSet(),
+  newPrizeSet:()=>editPrizeSet(null),
+  editPrizeSet:d=>editPrizeSet(d.id),
   evFilter:d=>{ui.evFilter=d.id;render()},
   newEvent:()=>{if(!sets().length){toast('先に「テンプレ」でテンプレを作ってください');return}newEvent()}, editEvent:d=>editEvent(d.id),
   pickSet:d=>{ui.setId=d.id;render()}, newSet:()=>newSet(), editSet:d=>editSet(d.id),
@@ -1227,6 +1376,11 @@ const ARRAY_FIELDS=['tpl','link_name','link_url'];
 /* 実績：期間を指定 */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.rep||!el.value)return;
   if(el.dataset.rep==='from')ui.repFrom=el.value;else ui.repTo=el.value;ui.repSel=null;ui.repScroll=null;render()});
+/* 賞品：手配済みのチェック／予算の上限 */
+document.addEventListener('change',e=>{const el=e.target;
+  if(el.dataset&&el.dataset.prizedone){const x=S.prize_items.find(y=>y.id===el.dataset.prizedone);if(x)put('prize_items',{...x,done:el.checked});return}
+  if(el.dataset&&el.dataset.inline==='prizeBudget'){const ev=evById(el.dataset.id);if(!ev)return;const v=el.value===''?null:Math.max(0,parseInt(el.value,10)||0);
+    put('events',{...ev,prize_budget:v});toast(v==null?'予算の上限を消しました':`予算の上限を${yen(v)}にしました`)}});
 /* 大会形式・場所の色を変える */
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.evcolor)return;
   const k=el.dataset.evcolor,n=el.dataset.name;put('event_colors',{id:k+'|'+n,kind:k,name:n,color:el.value});toast(`「${n}」の色を変えました`)});
