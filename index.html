@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <script>/* LINE の中で開いたら、Safari などふつうのブラウザで開き直す */
 (function(){try{if(/\bLine\//i.test(navigator.userAgent)&&!/[?&]openExternalBrowser=1/.test(location.search)){var u=new URL(location.href);u.searchParams.set('openExternalBrowser','1');location.replace(u.toString())}}catch(e){}})();</script>
-<title>モルマニ タスク管理</title>
+<title>MM-Tasks</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="MM Tasks">
@@ -251,7 +251,7 @@ const CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cHF0eWJ5Y3F5ZnllYmJ4Zmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTg0MTYsImV4cCI6MjEwODgzNDQxNn0.fqJtAK23WT9wAYJDx3hrk-HAjQFvtr_RKopYqHmvnM8',
 };
 
-const APP_VERSION='20261030-101513';   // 反映のたびに変える（新しい版のお知らせに使う）
+const APP_VERSION='20261030-102600';   // 反映のたびに変える（新しい版のお知らせに使う）
 const OPTIONAL_TABLES=['event_colors'];   // まだ Supabase に無くてもアプリは動く
 const TABLES = ['members','template_sets','categories','templates','events','tasks','routines','routine_checks','comments','comment_reads','event_colors'];
 const S = {members:[],template_sets:[],categories:[],templates:[],events:[],tasks:[],routines:[],routine_checks:[],comments:[],comment_reads:[],event_colors:[],staff:[]};
@@ -874,7 +874,7 @@ function render(){
   const views={home:viewHome,calendar:viewCalendar,events:()=>ui.eventId?viewEvent():viewEvents(),routines:viewRoutines,chat:viewChat,report:viewReport,templates:viewTemplates,settings:viewSettings};
   const y=window.scrollY;
   document.getElementById('app').innerHTML=`
-    <header><div class="bar"><img class="logo" src="logo.png" alt="MM Tasks"><h1>モルマニ タスク管理</h1>${DB.mode==='local'?'<span class="badge">お試しモード</span>':''}</div>
+    <header><div class="bar"><img class="logo" src="logo.png" alt="MM Tasks"><h1>MM-Tasks</h1>${DB.mode==='local'?'<span class="badge">お試しモード</span>':''}</div>
       <nav>${TABS.map(([k,l])=>{const u=k==='chat'?unreadThreads():0;return `<button class="${ui.tab===k?'on':''}" data-act="tab" data-id="${k}">${l}${u?`<span class="dot">${u}</span>`:''}</button>`}).join('')}</nav></header>
     <main>${views[ui.tab]()}</main>`;
   window.scrollTo(0,y);
@@ -884,7 +884,7 @@ function render(){
 function renderLogin(msg='',mode='login'){
   const su=mode==='signup';
   document.getElementById('app').innerHTML=`<div class="login"><div class="card">
-    <img src="logo.png" alt="MM Tasks" style="width:72px;height:72px;border-radius:16px;display:block;margin:0 0 10px;box-shadow:0 1px 4px rgba(0,0,0,.12)"><h1 style="font-size:18px;margin:0 0 4px">モルマニ タスク管理</h1>
+    <img src="logo.png" alt="MM Tasks" style="width:72px;height:72px;border-radius:16px;display:block;margin:0 0 10px;box-shadow:0 1px 4px rgba(0,0,0,.12)"><h1 style="font-size:18px;margin:0 0 4px">MM-Tasks</h1>
     <p class="muted" style="margin-top:0">運営スタッフ専用です。</p>
     <div class="chips" style="margin-bottom:12px"><button class="chip ${su?'':'on'}" data-act="loginMode" data-id="login">ログイン</button>
       <button class="chip ${su?'on':''}" data-act="loginMode" data-id="signup">はじめての方</button></div>
